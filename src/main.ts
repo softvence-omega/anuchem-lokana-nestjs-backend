@@ -10,6 +10,7 @@ async function bootstrap() {
   const port = configService.get('PORT');
 
   setupSwagger(app);
+  app.setGlobalPrefix("/api/v1")
   await app.useGlobalFilters(new GlobalErrorHandler());
   await app.listen(port ?? 3000);
 }

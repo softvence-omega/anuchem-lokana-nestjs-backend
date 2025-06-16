@@ -12,6 +12,7 @@ import { ForgotPasswordDto } from './dto/forgotPassword.dto';
 import { ChangePasswordDto } from './dto/changePassword.dto';
 import { ResetPasswordDto } from './dto/resetPassword.dto';
 import { User } from './entities/user.entity';
+import { CreateAuthDto } from './dto/create-auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -60,7 +61,7 @@ export class AuthService {
 
   }
 
-  async register(payload: any, file?: Express.Multer.File): Promise<any> {
+  async register(payload: CreateAuthDto): Promise<any> {
     const { email, password } = payload;
 
     const existingUser = await this.userRepository.findOneBy({ email });
@@ -70,16 +71,8 @@ export class AuthService {
 
     const hashPassword = await bcrypt.hash(password, Number(this.config.get("bcrypt_salt_rounds")));
 
-    let result;
-    if (file) {
-      try {
-        result = await this.cloudinary.uploadFile(file);
-      } catch (e) {
-        throw new ApiError(HttpStatus.INTERNAL_SERVER_ERROR, e.message);
-      }
-    }
 
-    const data = { ...payload, password: hashPassword, certificate: result ? result['secure_url'] : '' };
+    const data = { ...payload, password: hashPassword };
     const userEntity = this.userRepository.create(data);
     const savedUser = await this.userRepository.save(userEntity);
 
