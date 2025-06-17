@@ -10,8 +10,19 @@ export class CreateAuthDto {
     @IsEmail()
     email: string;
 
-    @ApiProperty({ example: "strong@1234" })
+    @ApiProperty({ example: "strong@1234", type: 'string' })
     @IsString()
     password: string;
 
+    @ApiProperty({ example: "123-1398433", type: 'string' })
+    @IsString()
+    phone: string;
+
+    @ApiProperty({ example: "+880", type: 'string' })
+    @IsString()
+    country_code: string;
+
+    @ApiProperty({ example: "admin or user", type: 'string' })
+    @IsString()
+    role: string;
 }
