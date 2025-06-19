@@ -1,5 +1,6 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiBody, ApiProperty } from "@nestjs/swagger";
 import { IsOptional, IsString } from "class-validator";
+
 
 export class CreateLocationDto {
     @ApiProperty({ example: "51.5074°N, 0.123°W", type: 'string' })

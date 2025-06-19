@@ -1,15 +1,25 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFiles } from '@nestjs/common';
 import { LocationService } from './location.service';
 import { CreateLocationDto } from './dto/create-location.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
+import { ApiConsumes } from '@nestjs/swagger';
+import { FileFieldsInterceptor, FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { Public } from 'src/common/utils/public.decorator';
 
 @Controller('location')
 export class LocationController {
-  constructor(private readonly locationService: LocationService) {}
+  constructor(private readonly locationService: LocationService) { }
 
+  @Public()
   @Post()
-  create(@Body() createLocationDto: CreateLocationDto) {
-    return this.locationService.create(createLocationDto);
+  @ApiConsumes("multipart/form-data")
+  @UseInterceptors(FileFieldsInterceptor([
+    { name: 'selfie', maxCount: 1 },
+    { name: 'doc', maxCount: 1 }
+  ]))
+  create(/*@Body() createLocationDto: CreateLocationDto,*/ @UploadedFiles() files: { selfie: Express.Multer.File[], doc: Express.Multer.File[] }) {
+    console.log(files.selfie[0]);
+    // return this.locationService.create(createLocationDto);
   }
 
   @Get()
