@@ -10,16 +10,17 @@ import { Public } from 'src/common/utils/public.decorator';
 export class LocationController {
   constructor(private readonly locationService: LocationService) { }
 
+  @ApiConsumes("multipart/form-data")
   @Public()
   @Post()
-  @ApiConsumes("multipart/form-data")
   @UseInterceptors(FileFieldsInterceptor([
     { name: 'selfie', maxCount: 1 },
-    { name: 'doc', maxCount: 1 }
+    { name: 'doc', maxCount: 1 },
+    { name: 'utility_doc', maxCount: 1 }
   ]))
-  create(/*@Body() createLocationDto: CreateLocationDto,*/ @UploadedFiles() files: { selfie: Express.Multer.File[], doc: Express.Multer.File[] }) {
-    console.log(files.selfie[0]);
-    // return this.locationService.create(createLocationDto);
+  create(@Body() createLocationDto: CreateLocationDto, @UploadedFiles() files: { selfie: Express.Multer.File[], doc: Express.Multer.File[], utility_doc: Express.Multer.File[] }) {
+    console.dir(files);
+    console.dir(createLocationDto);
   }
 
   @Get()

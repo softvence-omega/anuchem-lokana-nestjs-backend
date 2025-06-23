@@ -1,4 +1,4 @@
-import { ApiBody, ApiProperty } from "@nestjs/swagger";
+import { ApiProperty } from "@nestjs/swagger";
 import { IsOptional, IsString } from "class-validator";
 
 
@@ -19,18 +19,30 @@ export class CreateLocationDto {
     @IsString()
     region: string;
 
-    @ApiProperty({ example: "+880", type: 'string' })
+    @ApiProperty({ example: "+880", type: 'string', required: false })
     @IsString()
     @IsOptional()
     country_code?: string;
 
-    @ApiProperty({ example: '123-1938430' })
+    @ApiProperty({ example: '123-1938430', required: false })
     @IsString()
     @IsOptional()
     phone?: string;
 
-    @ApiProperty({ example: 'Nid card' })
+    @ApiProperty({ example: 'Nid card', required: false })
     @IsString()
     @IsOptional()
     doc_type: string;
+
+    @ApiProperty({ type: 'string', format: 'binary', required: false })
+    @IsOptional()
+    selfie: any;
+
+    @ApiProperty({ type: 'string', format: 'binary', required: false })
+    @IsOptional()
+    doc: any;
+
+    @ApiProperty({ type: 'string', format: 'binary', required: false })
+    @IsOptional()
+    utility_doc: any;
 }
