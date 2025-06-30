@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsOptional, IsString } from "class-validator";
+import { IsEnum, IsOptional, IsString } from "class-validator";
+import { Status } from "../entities/location.entity";
 
 
 export class CreateLocationDto {
@@ -18,6 +19,10 @@ export class CreateLocationDto {
     @ApiProperty({ example: "Western New york", type: 'string' })
     @IsString()
     region: string;
+
+    @ApiProperty({ example: Status.PENDING, enum: Status })
+    @IsEnum(Status)
+    status: Status;
 
     @ApiProperty({ example: "+880", type: 'string', required: false })
     @IsString()

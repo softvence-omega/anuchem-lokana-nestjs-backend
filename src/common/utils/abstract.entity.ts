@@ -4,7 +4,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-export abstract class AbstractionEntity {
+export abstract class AbstractEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -14,7 +14,7 @@ export abstract class AbstractionEntity {
   @UpdateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   updatedAt: Date;
 
-  constructor(entity: Partial<AbstractionEntity> = {}) {
+  constructor(entity: Partial<AbstractEntity> = {}) {
     Object.assign(this, entity);
   }
 }

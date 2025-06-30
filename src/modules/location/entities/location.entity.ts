@@ -1,8 +1,14 @@
-import { AbstractionEntity } from "src/common/utils/abstraction.entity";
+import { AbstractEntity } from "src/common/utils/abstract.entity";
 import { Column, Entity, OneToOne } from "typeorm";
 
+export enum Status {
+    PENDING = "PENDING",
+    VERIFIED = "VERIFIED",
+    REJECTED = "REJECTED"
+}
+
 @Entity('locations')
-export class Location extends AbstractionEntity {
+export class Location extends AbstractEntity {
     @Column()
     gps_code: string;
 
@@ -15,4 +21,6 @@ export class Location extends AbstractionEntity {
     @Column()
     region: string;
 
+    @Column({ enum: Status })
+    status: Status
 }

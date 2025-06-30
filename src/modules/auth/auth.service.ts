@@ -1,5 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
-import { ApiError } from 'src/common/errors/ApiError';
+import { ForbiddenException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -7,12 +6,13 @@ import { CloudinaryService } from 'src/common/cloudinary/cloudinary.service';
 import { EmailService } from 'src/common/nodemailer/email.service';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LoginDto } from './dto/login.dto';
-import { ForgotPasswordDto } from './dto/forgotPassword.dto';
-import { ChangePasswordDto } from './dto/changePassword.dto';
-import { ResetPasswordDto } from './dto/resetPassword.dto';
-import { User } from './entities/user.entity';
-import { CreateAuthDto } from './dto/create-auth.dto';
+import { ResetPasswordAuthDto } from './dto/reset-password.dto';
+import { ChangePasswordAuthDto } from './dto/change-password.dto';
+import { VerifyOtpAuthDto } from './dto/verify-password.dto';
+import { ForgetPasswordAuthDto } from './dto/forget-passord.dto';
+import { RegisterAuthDto } from './dto/register-auth.dto';
+import { LoginAuthDto } from './dto/login-auth.dto';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class AuthService {
@@ -21,148 +21,208 @@ export class AuthService {
     @InjectRepository(User) private userRepository: Repository<User>,
     private config: ConfigService,
     private jwtService: JwtService,
-    private cloudinary: CloudinaryService,
     private emailService: EmailService
   ) { }
 
-  async login(payload: LoginDto): Promise<any> {
-    const { email, password } = payload
-    const user = await this.userRepository.findOneBy({ email });
-    if (!user) {
-      throw new ApiError(HttpStatus.NOT_FOUND, "User not found!");
-    }
-
-    if (user.status === "blocked") {
-      throw new ApiError(HttpStatus.FORBIDDEN, "User is unauthorized!");
-    }
-
-    if (user.isDeleted) {
-      throw new ApiError(HttpStatus.FORBIDDEN, "User is deleted!");
-    }
-
-    const passwordVerify = await bcrypt.compare(password, user.password);
-
-    if (!passwordVerify) {
-      throw new ApiError(HttpStatus.FORBIDDEN, "Email or Password not matched!");
-    }
-
-    const jwtPayload = {
-      userId: user.id,
-      role: user.role
-    }
-
-    const accessToken = await this.jwtService.signAsync(jwtPayload, {
-      expiresIn: this.config.get("jwt_expired_in")
-    });
-
-    return {
-      accessToken
-    }
-
-  }
-
-  async register(payload: CreateAuthDto): Promise<any> {
-    const { email, password } = payload;
-
-    const existingUser = await this.userRepository.findOneBy({ email });
-    if (existingUser) {
-      throw new ApiError(HttpStatus.CONFLICT, "User already exist!");
-    }
-
-    const hashPassword = await bcrypt.hash(password, Number(this.config.get("bcrypt_salt_rounds")));
-
-
-    const data = { ...payload, password: hashPassword };
-    const userEntity = this.userRepository.create(data);
-    const savedUser = await this.userRepository.save(userEntity);
-
-    return savedUser;
-  }
-
-  async forgetPassword(payload: ForgotPasswordDto): Promise<any> {
+  async login(payload: LoginAuthDto) {
     const user = await this.userRepository.findOneBy({ email: payload.email });
     if (!user) {
-      throw new ApiError(HttpStatus.NOT_FOUND, "This user is not found !");
-    }
-    // checking if the user is already deleted
-    const isDeleted = user?.isDeleted;
-    if (isDeleted) {
-      throw new ApiError(HttpStatus.FORBIDDEN, "This user is deleted !");
+      throw new NotFoundException('User not exist!');
     }
 
-    // checking if the user is blocked
-    const userStatus = user?.status;
-    if (userStatus === "blocked") {
-      throw new ApiError(HttpStatus.FORBIDDEN, "This user is blocked ! !");
+    const matched = await bcrypt.compare(payload.password, user.password);
+    if (!matched) {
+      throw new ForbiddenException('Email or Password Invalid!');
     }
 
     const jwtPayload = {
-      userId: user.id,
+      id: user.id,
       role: user.role,
     };
 
-    const resetToken = await this.jwtService.signAsync(
-      jwtPayload,
-      {
-        expiresIn: this.config.get("jwt_expired_in")
-      }
-    );
+    const accessToken = await this.jwtService.signAsync(jwtPayload);
 
-    const resetUILink = `${this.config.get('reset_pass_ui_link')}?id=${user.id}&token=${resetToken}`;
-    this.emailService.sendEmail(user.email, "Reset password", `<p>Your password reset link: ${resetUILink}`)
+    return {
+      accessToken,
+      user: {
+        id: user.id,
+        username: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    };
   }
 
-  async changePassword(
-    userData: any,
-    payload: ChangePasswordDto
-  ): Promise<void> {
-    const user = await this.userRepository.findOneBy({ id: userData.userId });
+  async register(payload: RegisterAuthDto) {
+    const user = await this.userRepository.findOneBy({ email: payload.email });
+
+    if (user) {
+      throw new ForbiddenException('User already exists!');
+    }
+
+    const hashPassword = await bcrypt.hash(payload.password, this.config.get<number>("BCRYPT_SALT_ROUND") as number);
+
+    payload.password = hashPassword;
+
+    const data = await this.userRepository.create(payload);
+    const userData = await this.userRepository.save(data);
+    const jwtPayload = {
+      id: userData.id,
+    };
+
+    const accessToken = await this.jwtService.signAsync(jwtPayload);
+
+    return {
+      accessToken,
+      user: {
+        id: userData.id,
+        email: userData.email,
+      },
+    };
+  }
+
+  async forgetPassword(payload: ForgetPasswordAuthDto) {
+    const user = await this.userRepository.findOneBy({ email: payload.email });
 
     if (!user) {
-      throw new ApiError(HttpStatus.NOT_FOUND, "User not found!");
+      throw new NotFoundException('User not exists!');
     }
 
-    if (user.isDeleted) {
-      throw new ApiError(HttpStatus.FORBIDDEN, "User is deleted!");
-    }
+    const generatedOtp = this.emailService.generateNumericCode(6);
 
-    if (user.status === "blocked") {
-      throw new ApiError(HttpStatus.FORBIDDEN, "User is blocked!");
-    }
-    const isPasswordMatched = await bcrypt.compare(payload.oldPassword, user.password);
-    if (!isPasswordMatched) {
-      throw new ApiError(HttpStatus.FORBIDDEN, "Password did not match!");
-    }
+    user.otp = generatedOtp;
 
-    const newHashedPassword = await bcrypt.hash(
-      payload.password,
-      Number(this.config.get('bcrypt_salt_rounds'))
+    await this.userRepository.save(user);
+
+    const text = `
+      You requested to reset your password.
+
+      Your OTP (One-Time Password) is: ${generatedOtp}
+
+      Please enter this code in the app to complete your password reset.
+
+      This code is valid for the next 10 minutes. If you did not request this, please ignore this email.
+    `;
+    const html = `
+      <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
+        <p>You requested to reset your password.</p>
+        <p><strong>Your OTP (One-Time Password) is:</strong></p>
+        <div style="font-size: 20px; font-weight: bold; margin: 10px 0; color: #2c3e50;">${generatedOtp}</div>
+        <p>Please enter this code in the app to complete your password reset.</p>
+        <p style="color: #999;">This code is valid for the next 10 minutes.</p>
+        <p>If you did not request this, please ignore this email.</p>
+      </div>
+    `;
+
+    await this.emailService.sendEmail(
+      user.email,
+      'Password Reset OTP',
+      text,
+      html,
     );
 
-    user.password = newHashedPassword;
+    //generate jwt token
+    const jwtPayload = {
+      id: user.id,
+    };
+
+    const resetToken = await this.jwtService.signAsync(jwtPayload, {
+      expiresIn: this.config.getOrThrow('RESET_TOKEN_EXPIRES_IN'),
+    });
+
+    return {
+      resetToken,
+    };
+  }
+
+  async verifyOtp(payload: VerifyOtpAuthDto) {
+    const isVerified = await this.jwtService.verifyAsync(payload.resetToken);
+
+    if (!isVerified) {
+      throw new ForbiddenException('Invalid token!');
+    }
+
+    const decode = await this.jwtService.decode(payload.resetToken);
+    const user = await this.userRepository.findOneBy({ id: decode.id });
+
+    if (!user) {
+      throw new ForbiddenException('Something went wrong, try again!');
+    }
+
+    if (user.otp !== payload.otp) {
+      throw new ForbiddenException('OTP not matched!');
+    }
+
+    user.otp = '';
+
+    await this.userRepository.save(user);
+
+    const jwtPayload = {
+      id: user.id,
+    };
+
+    // generate token
+    const resetToken = await this.jwtService.signAsync(jwtPayload, {
+      expiresIn: this.config.getOrThrow('RESET_TOKEN_EXPIRES_IN'),
+    });
+
+    return {
+      resetToken,
+    };
+  }
+
+  async resetPassword(payload: ResetPasswordAuthDto) {
+    const isVerified = await this.jwtService.verifyAsync(payload.resetToken);
+
+    if (!isVerified) {
+      throw new ForbiddenException('Invalid token!');
+    }
+    // decode token
+    const decode = await this.jwtService.decode(payload.resetToken);
+    const user = await this.userRepository.findOneBy({ id: decode.id });
+
+    if (!user) {
+      throw new NotFoundException('Something went wrong!');
+    }
+
+    const hashedPassword = await bcrypt.hash(payload.password, this.config.get<number>("BCRYPT_SALT_ROUND") as number);
+
+    user.password = hashedPassword;
+
     await this.userRepository.save(user);
 
     return;
   }
 
+  async changePassword(user, payload: ChangePasswordAuthDto) {
+    const userData = await this.userRepository.findOneBy({ id: user.id })
 
-  async resetPassword(payload: ResetPasswordDto): Promise<any> {
-    if (await this.jwtService.verifyAsync(payload.resetToken)) {
-      throw new ApiError(HttpStatus.FORBIDDEN, "Invalid or expired token!");
+    if (!userData) {
+      throw new NotFoundException('Something went wrong!');
     }
 
-    const user = await this.userRepository.findOneBy({ id: payload.id });
-    if (!user) {
-      throw new ApiError(HttpStatus.NOT_FOUND, "User not found!");
+    const matched = await bcrypt.compare(payload.oldPassword, userData.password);
+
+    if (!matched) {
+      throw new ForbiddenException('Old password not matched!');
     }
 
-    const hashedPassword = await bcrypt.hash(payload.newPassword, 10);
+    const hashedPassword = await bcrypt.hash(payload.password, this.config.get<number>("BCRYPT_SALT_ROUND") as number);
 
-    user.password = hashedPassword;
-    await this.userRepository.save(user);
+    userData.password = hashedPassword;
 
-    return {
-      message: "Password has been reset successfully",
-    };
+    return;
+  }
+
+  async remove(user) {
+    const userData = await this.userRepository.findOneBy({ id: user.id });
+
+    if (!userData) {
+      throw new NotFoundException('User not found!');
+    }
+
+    await this.userRepository.remove(userData);
+
+    return;
   }
 }

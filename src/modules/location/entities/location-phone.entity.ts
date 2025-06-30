@@ -1,8 +1,8 @@
-import { AbstractionEntity } from "src/common/utils/abstraction.entity";
+import { AbstractEntity } from "src/common/utils/abstract.entity";
 import { Column, Entity, OneToOne } from "typeorm";
 
 @Entity('location_phones')
-export class LocationPhone extends AbstractionEntity {
+export class LocationPhone extends AbstractEntity {
     @Column()
     country_code: string;
 
