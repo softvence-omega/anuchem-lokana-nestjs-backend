@@ -12,7 +12,7 @@ const swaggerConfig = new DocumentBuilder()
             name: 'Authorization',
             in: 'header',
         },
-        'auth',
+        'accessToken',
     )
     .build();
 
