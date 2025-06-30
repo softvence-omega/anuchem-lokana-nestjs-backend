@@ -1,8 +1,6 @@
-import { ForbiddenException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { CloudinaryService } from 'src/common/cloudinary/cloudinary.service';
 import { EmailService } from 'src/common/nodemailer/email.service';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -13,6 +11,7 @@ import { ForgetPasswordAuthDto } from './dto/forget-passord.dto';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { User } from '../user/entities/user.entity';
+import { BcryptService } from 'src/common/bcrypt/bcrypt.service';
 
 @Injectable()
 export class AuthService {
@@ -21,7 +20,8 @@ export class AuthService {
     @InjectRepository(User) private userRepository: Repository<User>,
     private config: ConfigService,
     private jwtService: JwtService,
-    private emailService: EmailService
+    private emailService: EmailService,
+    private bcrypt: BcryptService
   ) { }
 
   async login(payload: LoginAuthDto) {
@@ -30,7 +30,7 @@ export class AuthService {
       throw new NotFoundException('User not exist!');
     }
 
-    const matched = await bcrypt.compare(payload.password, user.password);
+    const matched = await this.bcrypt.comparePasswords(payload.password, user.password);
     if (!matched) {
       throw new ForbiddenException('Email or Password Invalid!');
     }
@@ -60,8 +60,7 @@ export class AuthService {
       throw new ForbiddenException('User already exists!');
     }
 
-    const hashPassword = await bcrypt.hash(payload.password, this.config.get<number>("BCRYPT_SALT_ROUND") as number);
-
+    const hashPassword = await this.bcrypt.hashPassword(payload.password);
     payload.password = hashPassword;
 
     const data = await this.userRepository.create(payload);
@@ -185,7 +184,7 @@ export class AuthService {
       throw new NotFoundException('Something went wrong!');
     }
 
-    const hashedPassword = await bcrypt.hash(payload.password, this.config.get<number>("BCRYPT_SALT_ROUND") as number);
+    const hashedPassword = await this.bcrypt.hashPassword(payload.password);
 
     user.password = hashedPassword;
 
@@ -201,13 +200,13 @@ export class AuthService {
       throw new NotFoundException('Something went wrong!');
     }
 
-    const matched = await bcrypt.compare(payload.oldPassword, userData.password);
+    const matched = await this.bcrypt.comparePasswords(payload.oldPassword, userData.password);
 
     if (!matched) {
       throw new ForbiddenException('Old password not matched!');
     }
 
-    const hashedPassword = await bcrypt.hash(payload.password, this.config.get<number>("BCRYPT_SALT_ROUND") as number);
+    const hashedPassword = await this.bcrypt.hashPassword(payload.password);
 
     userData.password = hashedPassword;
 

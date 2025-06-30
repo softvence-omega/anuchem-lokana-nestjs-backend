@@ -20,7 +20,7 @@ export class EmailService {
 
     public async sendEmail(to: string, subject: string, text: string, html: string): Promise<void> {
         await this.transporter.sendMail({
-            from: this.configService.get<string>('SMTP_AUTH_USER'),
+            from: `Support Team`,
             to,
             subject,
             text,

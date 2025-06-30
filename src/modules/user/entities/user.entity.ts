@@ -23,12 +23,15 @@ export class User extends AbstractEntity {
     @Column()
     password: string;
 
-    @Column()
+    @Column({ nullable: true })
     otp: string;
 
-    @Column()
+    @Column({ nullable: true })
     image: string;
 
-    @Column({ enum: Role })
-    role: Role
+    @Column({ enum: Role, default: Role.USER })
+    role: Role;
+
+    @Column({ nullable: true })
+    address: string;
 }

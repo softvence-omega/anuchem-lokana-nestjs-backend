@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsEnum, IsString, Min } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsString, Min } from 'class-validator';
 import { Role } from 'src/modules/user/entities/user.entity';
 
 export class RegisterAuthDto {
@@ -23,7 +23,13 @@ export class RegisterAuthDto {
   @IsString()
   country_code: string;
 
+  @ApiProperty({ example: "Bir uttom ak khandaker Road, Mohakhali", type: 'string' })
+  @IsString()
+  @IsOptional()
+  address: string;
+
   @ApiProperty({ example: Role.USER, enum: Role })
   @IsEnum(Role)
+  @IsOptional()
   role: Role;
 }

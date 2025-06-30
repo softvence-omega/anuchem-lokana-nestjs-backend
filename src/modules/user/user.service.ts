@@ -1,26 +1,58 @@
-import { Injectable } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { User } from './entities/user.entity';
+import { Repository } from 'typeorm';
+import { CloudinaryService } from 'src/common/cloudinary/cloudinary.service';
 
 @Injectable()
 export class UserService {
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
+
+  constructor(
+    @InjectRepository(User) private userRepository: Repository<User>,
+    private readonly cloudinary: CloudinaryService
+  ) { }
+
+  async findOne(id: string) {
+    const user = await this.userRepository.findOneBy({ id });
+    if (!user) {
+      throw new InternalServerErrorException('Something went wrong!');
+    }
+    const { password, ...result } = user;
+
+    return {
+      user: result
+    };
   }
 
-  findAll() {
-    return `This action returns all user`;
-  }
+  async update(user, updateUserDto: UpdateUserDto, file?: Express.Multer.File) {
+    const userData = await this.userRepository.findOneBy({ id: user.id });
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
-  }
+    if (!userData) {
+      throw new InternalServerErrorException('Something went wrong, try again!');
+    }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
-  }
+    userData.name = updateUserDto.name ? updateUserDto.name : userData.name;
+    userData.country_code = updateUserDto.country_code ? updateUserDto.country_code : userData.country_code;
+    userData.phone = updateUserDto.phone ? updateUserDto.phone : userData.phone;
+    userData.address = updateUserDto.address ? updateUserDto.address : userData.address;
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+    if (file) {
+
+      if (user.image) {
+        const publicId = this.cloudinary.extractPublicId(user.image);
+        await this.cloudinary.destroyFile(publicId);
+      }
+
+      const res = await this.cloudinary.uploadFile(file);
+      userData.image = res['secure_url'];
+    }
+
+
+
+    const { password, ...result } = await this.userRepository.save(userData);
+    return {
+      user: result
+    }
   }
 }
