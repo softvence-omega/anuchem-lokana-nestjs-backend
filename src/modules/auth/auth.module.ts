@@ -7,9 +7,10 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { User } from '../user/entities/user.entity';
 import { CommonModule } from 'src/common/common.module';
+import { VerificaitonCode } from '../user/entities/verification-code.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User]), JwtHelperModule, CommonModule],
+  imports: [TypeOrmModule.forFeature([User, VerificaitonCode]), JwtHelperModule, CommonModule],
   controllers: [AuthController],
   providers: [
     AuthService,

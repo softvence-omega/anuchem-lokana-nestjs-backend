@@ -18,13 +18,7 @@ export class User extends AbstractEntity {
     phone: string;
 
     @Column()
-    country_code: string;
-
-    @Column()
     password: string;
-
-    @Column({ nullable: true })
-    otp: string;
 
     @Column({ nullable: true })
     image: string;

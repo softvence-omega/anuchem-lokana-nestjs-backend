@@ -19,10 +19,6 @@ export class RegisterAuthDto {
   @IsString()
   phone: string;
 
-  @ApiProperty({ example: "+880", type: 'string' })
-  @IsString()
-  country_code: string;
-
   @ApiProperty({ example: "Bir uttom ak khandaker Road, Mohakhali", type: 'string' })
   @IsString()
   @IsOptional()
