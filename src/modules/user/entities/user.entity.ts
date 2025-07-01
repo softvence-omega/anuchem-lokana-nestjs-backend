@@ -6,6 +6,11 @@ export enum Role {
     USER = "USER"
 }
 
+export enum UserStatus {
+    INACTIVE = "INACTIVE",
+    ACTIVE = "ACTIVE"
+}
+
 @Entity('users')
 export class User extends AbstractEntity {
     @Column()
@@ -16,9 +21,6 @@ export class User extends AbstractEntity {
 
     @Column()
     phone: string;
-
-    @Column()
-    country_code: string;
 
     @Column()
     password: string;
@@ -34,4 +36,7 @@ export class User extends AbstractEntity {
 
     @Column({ nullable: true })
     address: string;
+
+    @Column({ enum: UserStatus, default: UserStatus.INACTIVE })
+    status: UserStatus
 }
