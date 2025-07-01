@@ -12,12 +12,14 @@ import { RegisterAuthDto } from './dto/register-auth.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { User } from '../user/entities/user.entity';
 import { BcryptService } from 'src/common/bcrypt/bcrypt.service';
+import { OtpSendMethod, VerificaitonCode } from '../user/entities/verification-code.entity';
 
 @Injectable()
 export class AuthService {
 
   constructor(
     @InjectRepository(User) private userRepository: Repository<User>,
+    @InjectRepository(VerificaitonCode) private verificationCodeRepository: Repository<VerificaitonCode>,
     private config: ConfigService,
     private jwtService: JwtService,
     private emailService: EmailService,
@@ -54,29 +56,50 @@ export class AuthService {
   }
 
   async register(payload: RegisterAuthDto) {
+    const generatedOtp = this.emailService.generateNumericCode(6);
+    const text = `
+    You are creating an account using this email address.
+    
+    Your OTP (One-Time Password) is: ${generatedOtp}
+    
+    Please enter this code in the app to active your account.
+    
+    This code is valid for the next 5 minutes. If you did not request this, please ignore this email.
+    `;
+    const html = `
+    <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
+    <p>You are creating an account using this email address.</p>
+    <p><strong>Your OTP (One-Time Password) is:</strong></p>
+    <div style="font-size: 20px; font-weight: bold; margin: 10px 0; color: #2c3e50;">${generatedOtp}</div>
+    <p>Please enter this code in the app to active your account.</p>
+    <p style="color: #999;">This code is valid for the next 5 minutes.</p>
+    <p>If you did not request this, please ignore this email.</p>
+    </div>
+    `;
+
+
     const user = await this.userRepository.findOneBy({ email: payload.email });
 
     if (user) {
       throw new ForbiddenException('User already exists!');
     }
 
-    const hashPassword = await this.bcrypt.hashPassword(payload.password);
-    payload.password = hashPassword;
+    await this.verificationCodeRepository.upsert(
+      {
+        email: payload.email,
+        method: OtpSendMethod.EMAIL,
+        otp: generatedOtp
+      },
+      ['email']
+    );
 
-    const data = await this.userRepository.create(payload);
-    const userData = await this.userRepository.save(data);
-    const jwtPayload = {
-      id: userData.id,
-    };
+    await this.emailService.sendMail(payload.email, "Email verification mail", text, html);
 
-    const accessToken = await this.jwtService.signAsync(jwtPayload);
+    const jwtPayload = { ...payload }
+    const verificationToken = await this.jwtService.signAsync(jwtPayload);
 
     return {
-      accessToken,
-      user: {
-        id: userData.id,
-        email: userData.email,
-      },
+      verificationToken
     };
   }
 
@@ -89,9 +112,13 @@ export class AuthService {
 
     const generatedOtp = this.emailService.generateNumericCode(6);
 
-    user.otp = generatedOtp;
+    const data = await this.verificationCodeRepository.create({
+      email: user.email,
+      otp: generatedOtp,
+      method: OtpSendMethod.EMAIL
+    })
 
-    await this.userRepository.save(user);
+    await this.verificationCodeRepository.save(data);
 
     const text = `
       You requested to reset your password.
@@ -113,7 +140,7 @@ export class AuthService {
       </div>
     `;
 
-    await this.emailService.sendEmail(
+    await this.emailService.sendMail(
       user.email,
       'Password Reset OTP',
       text,
@@ -135,39 +162,92 @@ export class AuthService {
   }
 
   async verifyOtp(payload: VerifyOtpAuthDto) {
-    const isVerified = await this.jwtService.verifyAsync(payload.resetToken);
-
-    if (!isVerified) {
-      throw new ForbiddenException('Invalid token!');
+    let isVerified;
+    if (payload.verificationToken) {
+      isVerified = await this.jwtService.verifyAsync(payload.verificationToken);
+    } else {
+      isVerified = await this.jwtService.verifyAsync(payload.resetToken);
     }
 
-    const decode = await this.jwtService.decode(payload.resetToken);
-    const user = await this.userRepository.findOneBy({ id: decode.id });
+    if (!isVerified) {
+      throw new ForbiddenException('Otp expired, try again!');
+    }
+
+    let decode;
+    if (payload.verificationToken) {
+      decode = await this.jwtService.decode(payload.verificationToken);
+    } else {
+      decode = await this.jwtService.decode(payload.resetToken);
+    }
+
+    let user;
+    let code;
+    if (decode.id) {
+      user = await this.userRepository.findOneBy({ id: decode.id });
+      code = await this.verificationCodeRepository.findOneBy({ email: user.email });
+
+      if (!code) {
+        throw new ForbiddenException('Something went wrong, try again!');
+      }
+
+      if (payload.otp !== code.otp) {
+        throw new ForbiddenException("Otp not matched!, try again!");
+      }
+
+    } else {
+
+      code = await this.verificationCodeRepository.findOneBy({ email: decode.email });
+
+      if (!code) {
+        throw new ForbiddenException("Something went wrong, try again!");
+      }
+
+      if (payload.otp !== code.otp) {
+        throw new ForbiddenException("Otp not matched, try again!");
+      }
+
+      decode.password = await this.bcrypt.hashPassword(decode.password);
+      user = this.userRepository.create(decode);
+      user = await this.userRepository.save(user);
+    }
+
+    await this.verificationCodeRepository.remove(code);
 
     if (!user) {
       throw new ForbiddenException('Something went wrong, try again!');
     }
 
-    if (user.otp !== payload.otp) {
-      throw new ForbiddenException('OTP not matched!');
+    let jwtPayload;
+
+    if (decode.id) {
+      jwtPayload = {
+        id: user.id,
+      };
+      const resetToken = await this.jwtService.signAsync(jwtPayload, {
+        expiresIn: this.config.getOrThrow('RESET_TOKEN_EXPIRES_IN'),
+      });
+
+      return {
+        resetToken
+      }
+    } else {
+      jwtPayload = {
+        id: user.id,
+        role: user.role
+      }
+
+      const accessToken = await this.jwtService.signAsync(jwtPayload);
+
+      return {
+        accessToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role
+        }
+      }
     }
 
-    user.otp = '';
-
-    await this.userRepository.save(user);
-
-    const jwtPayload = {
-      id: user.id,
-    };
-
-    // generate token
-    const resetToken = await this.jwtService.signAsync(jwtPayload, {
-      expiresIn: this.config.getOrThrow('RESET_TOKEN_EXPIRES_IN'),
-    });
-
-    return {
-      resetToken,
-    };
   }
 
   async resetPassword(payload: ResetPasswordAuthDto) {
