@@ -33,7 +33,6 @@ export class UserService {
     }
 
     userData.name = updateUserDto.name ? updateUserDto.name : userData.name;
-    userData.country_code = updateUserDto.country_code ? updateUserDto.country_code : userData.country_code;
     userData.phone = updateUserDto.phone ? updateUserDto.phone : userData.phone;
     userData.address = updateUserDto.address ? updateUserDto.address : userData.address;
 
