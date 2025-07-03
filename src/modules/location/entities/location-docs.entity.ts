@@ -1,20 +1,15 @@
 import { AbstractEntity } from "src/common/utils/abstract.entity";
 import { Column, Entity, OneToOne } from "typeorm";
+import { Location } from "./location.entity";
 
-@Entity('location_phones')
-export class LocationPhone extends AbstractEntity {
+@Entity("location_docs")
+export class LocationDocs extends AbstractEntity {
     @Column()
-    country_code: string;
-
-    @Column()
-    phone: string;
+    doc: string;
 
     @Column()
-    is_verified: string;
-
-    @Column()
-    otp: string;
+    doc_type: string;
 
     @OneToOne(() => Location, { cascade: true, onDelete: 'CASCADE' })
-    location: Location;
+    location: Location
 }
