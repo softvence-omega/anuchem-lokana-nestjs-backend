@@ -2,8 +2,8 @@ import { AbstractEntity } from "src/common/utils/abstract.entity";
 import { Column, Entity, JoinColumn, OneToOne } from "typeorm";
 import { LocationDocs } from "./location-docs.entity";
 import { LocationPhone } from "./location-phone.entity";
-import { LocationImage } from "./location-selfie.entity";
 import { LocationApiVerificationInfo } from "./location-api-verification-info.entity";
+import { LocationImage } from "./location-selfie.entity";
 
 export enum Status {
     PENDING = "PENDING",

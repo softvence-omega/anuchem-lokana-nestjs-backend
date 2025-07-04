@@ -54,7 +54,7 @@ export class LocationController {
   }
 
   @Post()
-  findOne(@Param('id') id: string) {
+  async(@Param('id') id: string) {
     return this.locationService.findOne(+id);
   }
 
