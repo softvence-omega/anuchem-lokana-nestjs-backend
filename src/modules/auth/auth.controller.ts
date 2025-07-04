@@ -8,6 +8,7 @@ import { ResetPasswordAuthDto } from './dto/reset-password.dto';
 import { ChangePasswordAuthDto } from './dto/change-password.dto';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
+import { sendResponse } from 'src/common/utils/sendResponse';
 
 @Controller('auth')
 export class AuthController {
@@ -17,83 +18,69 @@ export class AuthController {
   @Post('login')
   async login(@Body() loginAuthDto: LoginAuthDto) {
     const result = await this.authService.login(loginAuthDto);
-    return {
-      statusCode: HttpStatus.OK,
-      success: true,
-      message: 'Login successfull!',
-      data: result,
-    };
+    return sendResponse(
+      'Login successfull!',
+      result,
+    );
   }
 
   @Public()
   @Post('register')
   async register(@Body() payload: RegisterAuthDto) {
     const result = await this.authService.register(payload);
-    return {
-      statusCode: HttpStatus.OK,
-      success: true,
-      message: 'Registration successfull!',
-      data: result,
-    };
+    return sendResponse(
+      'Registration successfull!',
+      result,
+    );
   }
 
   @Public()
   @Post('forget-password')
   async forgetPassword(@Body() payload: ForgetPasswordAuthDto) {
     const result = await this.authService.forgetPassword(payload);
-    return {
-      statusCode: HttpStatus.OK,
-      success: true,
-      message: 'Email sent successfully!',
-      data: result,
-    };
+    return sendResponse(
+      'Email sent successfully!',
+      result,
+    );
   }
 
   @Public()
   @Post('verify-otp')
   async verifyOtp(@Body() payload: VerifyOtpAuthDto) {
     const result = await this.authService.verifyOtp(payload);
-    return {
-      statusCode: HttpStatus.OK,
-      success: true,
-      message: 'OTP verified successfully!',
-      data: result,
-    };
+    return sendResponse(
+      'OTP verified successfully!',
+      result,
+    );
   }
 
   @Public()
   @Post('reset-password')
   async resetPassword(@Body() payload: ResetPasswordAuthDto) {
     const result = await this.authService.resetPassword(payload);
-    return {
-      statusCode: HttpStatus.OK,
-      success: true,
-      message: 'Password was reset successfully!',
-      data: result,
-    };
+    return sendResponse(
+      'Password was reset successfully!',
+      result,
+    );
   }
 
   @ApiSecurity('accessToken')
   @Patch('change-password')
   async changePassword(@Req() req, @Body() payload: ChangePasswordAuthDto) {
     const result = await this.authService.changePassword(req.user, payload);
-    return {
-      statusCode: HttpStatus.OK,
-      success: true,
-      message: 'Password updated successfully!',
-      data: result,
-    };
+    return sendResponse(
+      'Password updated successfully!',
+      result,
+    );
   }
 
   @ApiSecurity('accessToken')
   @Delete()
   async delete(@Req() req) {
     const result = await this.authService.remove(req.user);
-    return {
-      statusCode: HttpStatus.OK,
-      success: true,
-      message: 'Account deleted successfully!',
-      data: result,
-    };
+    return sendResponse(
+      'Account deleted successfully!',
+      result,
+    );
   }
 }

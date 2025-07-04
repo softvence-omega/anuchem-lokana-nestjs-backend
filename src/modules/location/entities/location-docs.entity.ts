@@ -1,6 +1,5 @@
 import { AbstractEntity } from "src/common/utils/abstract.entity";
-import { Column, Entity, OneToOne } from "typeorm";
-import { Location } from "./location.entity";
+import { Column, Entity } from "typeorm";
 
 @Entity("location_docs")
 export class LocationDocs extends AbstractEntity {
@@ -9,7 +8,4 @@ export class LocationDocs extends AbstractEntity {
 
     @Column()
     doc_type: string;
-
-    @OneToOne(() => Location, { cascade: true, onDelete: 'CASCADE' })
-    location: Location
 }

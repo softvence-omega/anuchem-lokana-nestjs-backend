@@ -1,6 +1,4 @@
-import { Column, Entity, OneToOne } from "typeorm";
-import { LocationDocs } from "./location-docs.entity";
-import { Location } from "./location.entity";
+import { Column, Entity } from "typeorm";
 
 @Entity('location_api_verification_infos')
 export class LocationApiVerificationInfo {
@@ -15,10 +13,4 @@ export class LocationApiVerificationInfo {
 
     @Column()
     country: string;
-
-    @OneToOne(() => LocationDocs, { cascade: true, onDelete: 'CASCADE' })
-    location_doc: LocationDocs;
-
-    @OneToOne(() => Location, { cascade: true, onDelete: 'CASCADE' })
-    location: Location
 }

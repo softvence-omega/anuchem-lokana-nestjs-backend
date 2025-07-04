@@ -1,5 +1,9 @@
 import { AbstractEntity } from "src/common/utils/abstract.entity";
-import { Column, Entity, OneToOne } from "typeorm";
+import { Column, Entity, JoinColumn, OneToOne } from "typeorm";
+import { LocationDocs } from "./location-docs.entity";
+import { LocationPhone } from "./location-phone.entity";
+import { LocationImage } from "./location-selfie.entity";
+import { LocationApiVerificationInfo } from "./location-api-verification-info.entity";
 
 export enum Status {
     PENDING = "PENDING",
@@ -21,6 +25,25 @@ export class Location extends AbstractEntity {
     @Column()
     region: string;
 
-    @Column({ enum: Status })
-    status: Status
+    @Column({ enum: Status, default: Status.PENDING })
+    status: Status;
+
+    @Column({ nullable: true })
+    agent_code: string;
+
+    @OneToOne(() => LocationDocs, { cascade: true, onDelete: 'CASCADE' })
+    @JoinColumn()
+    doc: LocationDocs;
+
+    @OneToOne(() => LocationPhone, { cascade: true, onDelete: 'CASCADE' })
+    @JoinColumn()
+    phone: LocationPhone;
+
+    @OneToOne(() => LocationImage, { cascade: true, onDelete: 'CASCADE' })
+    @JoinColumn()
+    images: LocationImage;
+
+    @OneToOne(() => LocationApiVerificationInfo, { cascade: true, onDelete: 'CASCADE' })
+    @JoinColumn()
+    apiVerificationInfo: LocationApiVerificationInfo;
 }
