@@ -1,9 +1,9 @@
 import { AbstractEntity } from "src/common/utils/abstract.entity";
-import { Column, Entity, JoinColumn, OneToOne } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from "typeorm";
 import { LocationDocs } from "./location-docs.entity";
-import { LocationPhone } from "./location-phone.entity";
 import { LocationApiVerificationInfo } from "./location-api-verification-info.entity";
 import { LocationImage } from "./location-selfie.entity";
+import { User } from "src/modules/user/entities/user.entity";
 
 export enum Status {
     PENDING = "PENDING",
@@ -13,6 +13,9 @@ export enum Status {
 
 @Entity('locations')
 export class Location extends AbstractEntity {
+    @ManyToOne(() => User)
+    user: User
+
     @Column()
     gps_code: string;
 
@@ -35,9 +38,8 @@ export class Location extends AbstractEntity {
     @JoinColumn()
     doc: LocationDocs;
 
-    @OneToOne(() => LocationPhone, { cascade: true, onDelete: 'CASCADE' })
-    @JoinColumn()
-    phone: LocationPhone;
+    @Column()
+    phone: string;
 
     @OneToOne(() => LocationImage, { cascade: true, onDelete: 'CASCADE' })
     @JoinColumn()

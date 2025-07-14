@@ -38,4 +38,8 @@ export class CreateLocationSimSelfieDto {
         },
     })
     photos: any[];
+
+    @ApiProperty({example: "alskdjfowisalkdfjo...", type: 'string'})
+    @IsString()
+    verified_token: string;
 }
