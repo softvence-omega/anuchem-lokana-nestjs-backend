@@ -7,6 +7,6 @@ export class LocationImage extends AbstractEntity {
     @Column({ nullable: true })
     selfie: string;
 
-    @Column({ nullable: true })
+    @Column('text', { nullable: true, array: true })
     images: Array<string>
 }

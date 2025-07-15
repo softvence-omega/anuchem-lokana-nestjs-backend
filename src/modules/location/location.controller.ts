@@ -10,6 +10,7 @@ import { CreateLocationForVerifyDto } from './dto/create-location-for-verify.dto
 import { CreateLocationAgentCodeDto } from './dto/create-location-agent-code.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
 import { SendVerificationOtpDto } from './dto/sendVerificationOtp.dto';
+import { OtpVerificationDto } from './dto/otp-verification.dto';
 
 @Controller('location')
 export class LocationController {
@@ -146,6 +147,16 @@ export class LocationController {
     const result = await this.locationService.sendVerificationOtpMessage(payload);
     return sendResponse(
       "Verification sms sent successfully!",
+      result
+    )
+  }
+
+  @ApiSecurity("accessToken")
+  @Post('verify-otp')
+  async verifyOtp(@Body() payload:OtpVerificationDto){
+    const result = await this.locationService.verifyOtp(payload);
+    return sendResponse(
+      "Otp has been verified successfully!",
       result
     )
   }
