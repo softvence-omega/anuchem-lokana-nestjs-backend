@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  app:
+    container_name: nestjs-app-dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:5000"
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://postgres:admin@db:5432/lokana_db
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - .:/app               # Sync host code to container
+      - /app/node_modules    # Prevent overwriting node_modules
+      - ./uploads:/app/uploads
+    command: npm run start:dev
+    networks:
+      - nest-network
+    develop:
+      watch:
+        - action: rebuild
+          path: .
+
+  db:
+    image: postgres:15
+    container_name: nestjs-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: lokana_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - nest-network
+
+volumes:
+  pgdata:
+  uploads:
+
+networks:
+  nest-network:

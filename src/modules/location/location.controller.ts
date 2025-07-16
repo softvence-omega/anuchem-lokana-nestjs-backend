@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFiles, Req } from '@nestjs/common';
 import { LocationService } from './location.service';;
 import { ApiConsumes, ApiSecurity } from '@nestjs/swagger';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
@@ -24,13 +24,14 @@ export class LocationController {
     { name: 'photos', maxCount: 3 }
   ]))
   async createSimSelfieLocation(
+    @Req() req,
     @Body() payload: CreateLocationSimSelfieDto,
     @UploadedFiles() files: {
       selfie: Express.Multer.File[],
       photos: Express.Multer.File[]
     }
   ) {
-    const result = await this.locationService.createSimSelfieLocation(payload, files.selfie, files.photos);
+    const result = await this.locationService.createSimSelfieLocation(req.user, payload, files.selfie, files.photos);
     return sendResponse(
       "Location with Sim and Selfie saved successfully!",
       result

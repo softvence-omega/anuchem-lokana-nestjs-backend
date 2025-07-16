@@ -8,7 +8,7 @@ import { CreateLocationAgentCodeDto } from './dto/create-location-agent-code.dto
 import { SendVerificationOtpDto } from './dto/sendVerificationOtp.dto';
 import { EmailService } from 'src/common/nodemailer/email.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { VerificaitonCode } from '../user/entities/verification-code.entity';
+import { OtpSendMethod, VerificaitonCode } from '../user/entities/verification-code.entity';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { OtpVerificationDto } from './dto/otp-verification.dto';
@@ -33,6 +33,7 @@ export class LocationService {
   ){}
 
   async createSimSelfieLocation(
+    user,
     payload: CreateLocationSimSelfieDto, 
     selfies: Express.Multer.File[], 
     photos: Express.Multer.File[]
@@ -58,14 +59,37 @@ export class LocationService {
       throw new ForbiddenException("The phone number is incorrect! check and try again");
     }
 
+    const image = await this.locationImage.create();
+
     if(selfies.length > 0){
-      const urls = await Promise.all(
-          selfies.map(async (selfie) => {
-            const result = await this.cloudinary.uploadFile(selfie);
-            return result.secure_url;
-          })
-        );
+      const result = await this.cloudinary.uploadFile(selfies[0]);
+      image.selfie = result['secure_url'];
     }
+
+    if(photos.length > 0){
+      const image_urls = await Promise.all(
+          photos.map(async (photo) => {
+            const result = await this.cloudinary.uploadFile(photo);
+            return result['secure_url'];
+          })
+      );
+
+      image.images = image_urls;
+    }
+
+    await this.locationImage.save(image);
+
+    const location = await this.location.create({
+      gps_code: payload.gps_code,
+      phone: payload.phone,
+      region: payload.region,
+      street_name: payload.street_name,
+      images: image,
+      district: payload.district,
+      user: user.id
+    });
+
+    return await this.location.save(location);
 
   }
 
@@ -114,7 +138,7 @@ export class LocationService {
       phone.otp = generatedCode;
       await this.verificationCode.save(phone);
     } else {
-      phone = await this.verificationCode.create({...payload, otp: generatedCode});
+      phone = await this.verificationCode.create({...payload, otp: generatedCode, method: OtpSendMethod.SMS});
       phone = await this.verificationCode.save(phone);
     }
     // @TODO:send local message
@@ -127,7 +151,8 @@ export class LocationService {
     const token = await this.jwtService.signAsync(jwtPayload);
 
     return {
-      sms_token: token
+      sms_token: token,
+      otp: generatedCode //@TODO: need to remove from here
     };
   }
 
