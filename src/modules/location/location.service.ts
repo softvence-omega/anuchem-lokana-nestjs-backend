@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { UpdateLocationDto } from './dto/update-location.dto';
 import { CreateLocationSimSelfieDto } from './dto/create-location-sim-selfie.dto';
 import { CreateLocationNidOcrDto } from './dto/create-location-nid-ocr.dto';
@@ -62,14 +62,14 @@ export class LocationService {
     const image = await this.locationImage.create();
 
     if(selfies.length > 0){
-      const result = await this.cloudinary.uploadFile(selfies[0]);
+      const result = await this.cloudinary.uploadFile(selfies[0], 'selfies');
       image.selfie = result['secure_url'];
     }
 
     if(photos.length > 0){
       const image_urls = await Promise.all(
           photos.map(async (photo) => {
-            const result = await this.cloudinary.uploadFile(photo);
+            const result = await this.cloudinary.uploadFile(photo, 'location_photos');
             return result['secure_url'];
           })
       );
@@ -94,12 +94,69 @@ export class LocationService {
   }
 
   async createNidOcrLocation(
+    user,
     payload: CreateLocationNidOcrDto, 
     selfies: Express.Multer.File[], 
     docs: Express.Multer.File[], 
     photos: Express.Multer.File[]
   ){
 
+    const locaionDataExist = await this.location.findOneBy({
+      gps_code: payload.gps_code
+    })
+
+    if(locaionDataExist){
+      throw new ConflictException("Location already exist!");
+    }
+
+    let image;
+
+    if(selfies.length > 0){
+      const result = await this.cloudinary.uploadFile(selfies[0], 'selfies');
+      image = image ? image : await this.locationImage.create();
+      image.selfie = result['secure_url'];
+    }
+
+    if(photos.length > 0){
+      const image_urls = await Promise.all(
+          photos.map(async (photo) => {
+            const result = await this.cloudinary.uploadFile(photo, 'location_photos');
+            return result['secure_url'];
+          })
+      );
+
+      image = image ? image : await this.locationImage.create();
+      image.images = image_urls;
+    }
+
+    let doc;
+    if(docs.length > 0){
+      const result = await this.cloudinary.uploadFile(docs[0], 'documents');
+      doc = doc ? doc : await this.locationDoc.create({
+        doc: result['secure_url'],
+        doc_type: "NATIONAL ID",
+      });
+    }
+
+    if(doc){
+      await this.locationDoc.save(doc);
+    }
+
+    if(image){
+      await this.locationImage.save(image);
+    }
+
+    const location = await this.location.create({
+      gps_code: payload.gps_code,
+      street_name: payload.street_name,
+      region: payload.region,
+      doc: doc ? doc : '',
+      images: image ? image : '',
+      user: user.id,
+      district: payload.district
+    })
+
+    return await this.location.save(location);
   }
 
   async createLocationApiVerification(

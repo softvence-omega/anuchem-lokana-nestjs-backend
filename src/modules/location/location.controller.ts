@@ -48,6 +48,7 @@ export class LocationController {
   ]))
   @Post('nationalId-with-ocr')
   async createNidOcrLocation(
+    @Req() req,
     @Body() payload: CreateLocationNidOcrDto,
     @UploadedFiles() files: {
       selfie: Express.Multer.File[],
@@ -55,7 +56,7 @@ export class LocationController {
       doc: Express.Multer.File[]
     }
   ) {
-    const result = await this.locationService.createNidOcrLocation(payload, files.selfie, files.doc, files.photos);
+    const result = await this.locationService.createNidOcrLocation(req.user, payload, files.selfie, files.doc, files.photos);
     return sendResponse(
       "Location with National ID and OCR saved successfully!",
       result

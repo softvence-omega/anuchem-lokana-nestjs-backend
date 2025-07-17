@@ -25,7 +25,7 @@ export class Location extends AbstractEntity {
     @Column()
     district: string;
 
-    @Column()
+    @Column() 
     region: string;
 
     @Column({ enum: Status, default: Status.PENDING })
