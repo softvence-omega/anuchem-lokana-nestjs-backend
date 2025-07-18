@@ -7,9 +7,9 @@ import { CreateLocationForVerifyDto } from './dto/create-location-for-verify.dto
 import { CreateLocationAgentCodeDto } from './dto/create-location-agent-code.dto';
 import { SendVerificationOtpDto } from './dto/sendVerificationOtp.dto';
 import { EmailService } from 'src/common/nodemailer/email.service';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { OtpSendMethod, VerificaitonCode } from '../user/entities/verification-code.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { OtpVerificationDto } from './dto/otp-verification.dto';
 import { Location } from './entities/location.entity';
@@ -29,7 +29,8 @@ export class LocationService {
     @InjectRepository(Location) private location: Repository<Location>,
     @InjectRepository(LocationApiVerificationInfo) private locationApiVerificationInfo: Repository<LocationApiVerificationInfo>,
     @InjectRepository(LocationImage) private locationImage: Repository<LocationImage>,
-    @InjectRepository(LocationDocs) private locationDoc: Repository<LocationDocs>
+    @InjectRepository(LocationDocs) private locationDoc: Repository<LocationDocs>,
+    @InjectDataSource() private dataSource: DataSource
   ){}
 
   async createSimSelfieLocation(
@@ -41,6 +42,14 @@ export class LocationService {
     const isVerified = await this.jwtService.verifyAsync(payload.verified_token);
     if(!isVerified){
       throw new ForbiddenException("Something went wrong! try again");
+    }
+
+    const locaionDataExist = await this.location.findOneBy({
+      gps_code: payload.gps_code
+    })
+
+    if(locaionDataExist){
+      throw new ConflictException("Location already exist!");
     }
 
     const {code_id, phone} = this.jwtService.decode(payload.verified_token);
@@ -101,11 +110,11 @@ export class LocationService {
     photos: Express.Multer.File[]
   ){
 
-    const locaionDataExist = await this.location.findOneBy({
+    const locationDataExist = await this.location.findOneBy({
       gps_code: payload.gps_code
     })
 
-    if(locaionDataExist){
+    if(locationDataExist){
       throw new ConflictException("Location already exist!");
     }
 
@@ -134,7 +143,7 @@ export class LocationService {
       const result = await this.cloudinary.uploadFile(docs[0], 'documents');
       doc = doc ? doc : await this.locationDoc.create({
         doc: result['secure_url'],
-        doc_type: "NATIONAL ID",
+        doc_type: "NATIONAL_ID",
       });
     }
 
@@ -150,8 +159,8 @@ export class LocationService {
       gps_code: payload.gps_code,
       street_name: payload.street_name,
       region: payload.region,
-      doc: doc ? doc : '',
-      images: image ? image : '',
+      doc: doc ?? null,
+      images: image ?? null,
       user: user.id,
       district: payload.district
     })
@@ -160,10 +169,67 @@ export class LocationService {
   }
 
   async createLocationApiVerification(
+    user,
     payload: CreateLocationApiVerificationDto, 
-    seflies: Express.Multer.File[], 
+    selfies: Express.Multer.File[], 
     docs: Express.Multer.File[]
   ){
+
+
+    const locationDataExist = await this.location.findOneBy({
+      gps_code: payload.gps_code
+    })
+
+    if(locationDataExist){
+      throw new ConflictException("Location already exist!");
+    }
+
+    let image;
+    if(selfies.length > 0){
+      const result = await this.cloudinary.uploadFile(selfies[0], 'selfies');
+      image = image ? image : await this.locationImage.create({
+        selfie: result['secure_url']
+      });
+    }
+
+    let doc;
+    if(docs.length > 0){
+      const result = await this.cloudinary.uploadFile(docs[0], 'documents');
+      doc = doc ? doc : await this.locationDoc.create({
+        doc: result['secure_url'],
+        doc_type: "NATIONAL_ID"
+      });
+    }
+
+    if(image){
+      await this.locationImage.save(image);
+    }
+
+    if(doc){
+      await this.locationDoc.save(doc);
+    }
+
+    const apiVerificationInfo = await this.locationApiVerificationInfo.create({
+      name: payload.full_name,
+      country: payload.country,
+      date_of_birth: payload.date_of_birth,
+      national_id: payload.nid_number
+    });
+
+    await this.locationApiVerificationInfo.save(apiVerificationInfo);
+
+    const location = await this.location.create({
+      user: user.id,
+      images: image ?? null,
+      doc: doc ?? null,
+      gps_code: payload.gps_code,
+      region: payload.region,
+      street_name: payload.street_name,
+      district: payload.district,
+      apiVerificationInfo: apiVerificationInfo
+    });
+
+    return await this.location.save(location);
 
   }
 
