@@ -1,31 +1,31 @@
-import { AbstractEntity } from "src/common/utils/abstract.entity";
-import { Column, Entity } from "typeorm";
+import { AbstractEntity } from 'src/common/utils/abstract.entity';
+import { Column, Entity } from 'typeorm';
 
 export enum Role {
-    ADMIN = "ADMIN",
-    USER = "USER"
+  ADMIN = 'ADMIN',
+  USER = 'USER',
 }
 
 @Entity('users')
 export class User extends AbstractEntity {
-    @Column()
-    name: string;
+  @Column()
+  name: string;
 
-    @Column()
-    email: string;
+  @Column()
+  email: string;
 
-    @Column()
-    phone: string;
+  @Column()
+  phone: string;
 
-    @Column()
-    password: string;
+  @Column()
+  password: string;
 
-    @Column({ nullable: true })
-    image: string;
+  @Column({ nullable: true })
+  image: string;
 
-    @Column({ enum: Role, default: Role.USER })
-    role: Role;
+  @Column({ enum: Role, default: Role.USER })
+  role: Role;
 
-    @Column({ nullable: true })
-    address: string;
+  @Column({ nullable: true })
+  address: string;
 }

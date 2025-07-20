@@ -11,7 +11,17 @@ import { LocationDocs } from './entities/location-docs.entity';
 import { JwtHelperModule } from 'src/config/jwt.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([VerificaitonCode, Location, LocationImage, LocationApiVerificationInfo, LocationDocs]), CommonModule, JwtHelperModule],
+  imports: [
+    TypeOrmModule.forFeature([
+      VerificaitonCode,
+      Location,
+      LocationImage,
+      LocationApiVerificationInfo,
+      LocationDocs,
+    ]),
+    CommonModule,
+    JwtHelperModule,
+  ],
   controllers: [LocationController],
   providers: [LocationService],
 })

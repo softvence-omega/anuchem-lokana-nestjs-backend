@@ -14,7 +14,13 @@ export interface LocalUploadResponse {
 
 @Injectable()
 export class CloudinaryService {
-  private readonly uploadRoot = path.join(__dirname, '..', '..', '..', 'uploads');
+  private readonly uploadRoot = path.join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    'uploads',
+  );
 
   constructor() {
     if (!fs.existsSync(this.uploadRoot)) {
@@ -22,7 +28,10 @@ export class CloudinaryService {
     }
   }
 
-  async uploadFile(file: Express.Multer.File, folder = 'nest_uploads'): Promise<LocalUploadResponse> {
+  async uploadFile(
+    file: Express.Multer.File,
+    folder = 'nest_uploads',
+  ): Promise<LocalUploadResponse> {
     let finalFileName;
     let fullPath;
     try {
@@ -57,6 +66,6 @@ export class CloudinaryService {
   }
 
   extractPublicId(url: string): string {
-    return path.basename(url);
+    return url.replace('/uploads/', '');
   }
 }

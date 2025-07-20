@@ -1,15 +1,15 @@
-import { HttpStatus } from "@nestjs/common"
+import { HttpStatus } from '@nestjs/common';
 
 export const sendResponse = <T>(
-    message,
-    data: T,
-    statusCode = HttpStatus.OK,
-    success = true,
+  message,
+  data: T,
+  statusCode = HttpStatus.OK,
+  success = true,
 ) => {
-    return {
-        statusCode,
-        success,
-        message,
-        data,
-    }
-}
+  return {
+    statusCode,
+    success,
+    message,
+    data,
+  };
+};

@@ -1,4 +1,9 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { UpdateLocationDto } from './dto/update-location.dto';
 import { CreateLocationSimSelfieDto } from './dto/create-location-sim-selfie.dto';
 import { CreateLocationNidOcrDto } from './dto/create-location-nid-ocr.dto';
@@ -8,8 +13,11 @@ import { CreateLocationAgentCodeDto } from './dto/create-location-agent-code.dto
 import { SendVerificationOtpDto } from './dto/sendVerificationOtp.dto';
 import { EmailService } from 'src/common/nodemailer/email.service';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { OtpSendMethod, VerificaitonCode } from '../user/entities/verification-code.entity';
-import { DataSource, Repository } from 'typeorm';
+import {
+  OtpSendMethod,
+  VerificaitonCode,
+} from '../user/entities/verification-code.entity';
+import { DataSource, DeepPartial, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { OtpVerificationDto } from './dto/otp-verification.dto';
 import { Location } from './entities/location.entity';
@@ -17,235 +25,387 @@ import { LocationApiVerificationInfo } from './entities/location-api-verificatio
 import { LocationImage } from './entities/location-selfie.entity';
 import { LocationDocs } from './entities/location-docs.entity';
 import { CloudinaryService } from 'src/common/cloudinary/cloudinary.service';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class LocationService {
-
   constructor(
     private emailService: EmailService,
     private jwtService: JwtService,
     private cloudinary: CloudinaryService,
-    @InjectRepository(VerificaitonCode) private verificationCode: Repository<VerificaitonCode>,
+    @InjectRepository(VerificaitonCode)
+    private verificationCode: Repository<VerificaitonCode>,
     @InjectRepository(Location) private location: Repository<Location>,
-    @InjectRepository(LocationApiVerificationInfo) private locationApiVerificationInfo: Repository<LocationApiVerificationInfo>,
-    @InjectRepository(LocationImage) private locationImage: Repository<LocationImage>,
-    @InjectRepository(LocationDocs) private locationDoc: Repository<LocationDocs>,
-    @InjectDataSource() private dataSource: DataSource
-  ){}
+    @InjectRepository(LocationApiVerificationInfo)
+    private locationApiVerificationInfo: Repository<LocationApiVerificationInfo>,
+    @InjectRepository(LocationImage)
+    private locationImage: Repository<LocationImage>,
+    @InjectRepository(LocationDocs)
+    private locationDoc: Repository<LocationDocs>,
+    @InjectDataSource() private dataSource: DataSource,
+  ) { }
 
   async createSimSelfieLocation(
     user,
-    payload: CreateLocationSimSelfieDto, 
-    selfies: Express.Multer.File[], 
-    photos: Express.Multer.File[]
-  ){
-    const isVerified = await this.jwtService.verifyAsync(payload.verified_token);
-    if(!isVerified){
-      throw new ForbiddenException("Something went wrong! try again");
+    payload: CreateLocationSimSelfieDto,
+    selfies: Express.Multer.File[],
+    photos: Express.Multer.File[],
+  ) {
+    const isVerified = await this.jwtService.verifyAsync(
+      payload.verified_token,
+    );
+    if (!isVerified) {
+      throw new ForbiddenException('Something went wrong! Try again.');
     }
 
-    const locaionDataExist = await this.location.findOneBy({
-      gps_code: payload.gps_code
-    })
+    const { code_id, phone } = this.jwtService.decode(payload.verified_token);
+    const code = await this.verificationCode.findOneBy({ id: code_id });
 
-    if(locaionDataExist){
-      throw new ConflictException("Location already exist!");
-    }
-
-    const {code_id, phone} = this.jwtService.decode(payload.verified_token);
-
-    const code = await this.verificationCode.findOneBy({id: code_id});
-
-    if(!code){
-      throw new ForbiddenException("Something went wrong! try again");
-    }
-
-    if(code.phone !== phone){
-      throw new ForbiddenException("Something went wrong! try again");
-    }
-
-    if(phone !== payload.phone){
-      throw new ForbiddenException("The phone number is incorrect! check and try again");
-    }
-
-    const image = await this.locationImage.create();
-
-    if(selfies.length > 0){
-      const result = await this.cloudinary.uploadFile(selfies[0], 'selfies');
-      image.selfie = result['secure_url'];
-    }
-
-    if(photos.length > 0){
-      const image_urls = await Promise.all(
-          photos.map(async (photo) => {
-            const result = await this.cloudinary.uploadFile(photo, 'location_photos');
-            return result['secure_url'];
-          })
+    if (!code || code.phone !== phone || phone !== payload.phone) {
+      throw new ForbiddenException(
+        'The phone number is incorrect or verification failed.',
       );
-
-      image.images = image_urls;
     }
 
-    await this.locationImage.save(image);
+    const uploadedFilePath: string[] = [];
 
-    const location = await this.location.create({
-      gps_code: payload.gps_code,
-      phone: payload.phone,
-      region: payload.region,
-      street_name: payload.street_name,
-      images: image,
-      district: payload.district,
-      user: user.id
-    });
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        const existingLocation = await manager.findOneBy(Location, {
+          gps_code: payload.gps_code,
+        });
 
-    return await this.location.save(location);
+        if (existingLocation) {
+          throw new ConflictException('Location already exists!');
+        }
 
+        const image = manager.create(LocationImage);
+
+        if (selfies.length > 0) {
+          const selfieUpload = await this.cloudinary.uploadFile(
+            selfies[0],
+            'selfies',
+          );
+          uploadedFilePath.push(selfieUpload.secure_url);
+          image.selfie = selfieUpload['secure_url'];
+        }
+
+        if (photos.length > 0) {
+          const photoUrls = await Promise.all(
+            photos.map(async (photo) => {
+              const result = await this.cloudinary.uploadFile(
+                photo,
+                'location_photos',
+              );
+              uploadedFilePath.push(result.secure_url);
+              return result['secure_url'];
+            }),
+          );
+          image.images = photoUrls;
+        }
+
+        await manager.save(LocationImage, image);
+
+        const location = manager.create(Location, {
+          gps_code: payload.gps_code,
+          phone: payload.phone,
+          region: payload.region,
+          street_name: payload.street_name,
+          images: image,
+          district: payload.district,
+          user: user.id,
+        });
+
+        return await manager.save(Location, location);
+      });
+    } catch (err) {
+      for (const path of uploadedFilePath) {
+        const relativePath = this.cloudinary.extractPublicId(path);
+        await this.cloudinary.destroyFile(relativePath);
+      }
+      throw err;
+    }
   }
 
   async createNidOcrLocation(
     user,
-    payload: CreateLocationNidOcrDto, 
-    selfies: Express.Multer.File[], 
-    docs: Express.Multer.File[], 
-    photos: Express.Multer.File[]
-  ){
+    payload: CreateLocationNidOcrDto,
+    selfies: Express.Multer.File[],
+    docs: Express.Multer.File[],
+    photos: Express.Multer.File[],
+  ) {
+    const uploadedFilePath: string[] = [];
 
-    const locationDataExist = await this.location.findOneBy({
-      gps_code: payload.gps_code
-    })
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        const existingLocation = await manager.findOneBy(Location, {
+          gps_code: payload.gps_code,
+        });
 
-    if(locationDataExist){
-      throw new ConflictException("Location already exist!");
-    }
+        if (existingLocation) {
+          throw new ConflictException('Location already exists!');
+        }
 
-    let image;
+        let image: LocationImage | null = null;
+        if (selfies.length > 0) {
+          const result = await this.cloudinary.uploadFile(
+            selfies[0],
+            'selfies',
+          );
+          uploadedFilePath.push(result.secure_url);
+          image = manager.create(LocationImage, {
+            selfie: result['secure_url'],
+          });
+        }
 
-    if(selfies.length > 0){
-      const result = await this.cloudinary.uploadFile(selfies[0], 'selfies');
-      image = image ? image : await this.locationImage.create();
-      image.selfie = result['secure_url'];
-    }
+        if (photos.length > 0) {
+          const imageUrls = await Promise.all(
+            photos.map(async (photo) => {
+              const result = await this.cloudinary.uploadFile(
+                photo,
+                'location_photos',
+              );
+              uploadedFilePath.push(result.secure_url);
+              return result['secure_url'];
+            }),
+          );
 
-    if(photos.length > 0){
-      const image_urls = await Promise.all(
-          photos.map(async (photo) => {
-            const result = await this.cloudinary.uploadFile(photo, 'location_photos');
-            return result['secure_url'];
-          })
-      );
+          if (image) {
+            image.images = imageUrls;
+          } else {
+            image = manager.create(LocationImage, { images: imageUrls });
+          }
+        }
 
-      image = image ? image : await this.locationImage.create();
-      image.images = image_urls;
-    }
+        if (image) {
+          await manager.save(LocationImage, image);
+        }
 
-    let doc;
-    if(docs.length > 0){
-      const result = await this.cloudinary.uploadFile(docs[0], 'documents');
-      doc = doc ? doc : await this.locationDoc.create({
-        doc: result['secure_url'],
-        doc_type: "NATIONAL_ID",
+        let doc: LocationDocs | null = null;
+        if (docs.length > 0) {
+          const result = await this.cloudinary.uploadFile(docs[0], 'documents');
+          uploadedFilePath.push(result.secure_url);
+          doc = manager.create(LocationDocs, {
+            doc: result['secure_url'],
+            doc_type: 'NATIONAL_ID',
+          });
+          await manager.save(LocationDocs, doc);
+        }
+
+        const location = manager.create(Location, {
+          gps_code: payload.gps_code,
+          street_name: payload.street_name,
+          region: payload.region,
+          district: payload.district,
+          user: user.id,
+          images: image ?? null,
+          doc: doc ?? null,
+        } as DeepPartial<Location>);
+
+        return await manager.save(Location, location);
       });
+    } catch (err) {
+      for (const path of uploadedFilePath) {
+        const relativePath = this.cloudinary.extractPublicId(path);
+        await this.cloudinary.destroyFile(relativePath);
+      }
+      throw err;
     }
-
-    if(doc){
-      await this.locationDoc.save(doc);
-    }
-
-    if(image){
-      await this.locationImage.save(image);
-    }
-
-    const location = await this.location.create({
-      gps_code: payload.gps_code,
-      street_name: payload.street_name,
-      region: payload.region,
-      doc: doc ?? null,
-      images: image ?? null,
-      user: user.id,
-      district: payload.district
-    })
-
-    return await this.location.save(location);
   }
 
   async createLocationApiVerification(
     user,
-    payload: CreateLocationApiVerificationDto, 
-    selfies: Express.Multer.File[], 
-    docs: Express.Multer.File[]
-  ){
+    payload: CreateLocationApiVerificationDto,
+    selfies: Express.Multer.File[],
+    docs: Express.Multer.File[],
+  ) {
+    const uploadedFilePath: string[] = [];
 
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        const locationDataExist = await manager.findOneBy(Location, {
+          gps_code: payload.gps_code,
+        });
 
-    const locationDataExist = await this.location.findOneBy({
-      gps_code: payload.gps_code
-    })
+        const userData = await manager.findOneBy(User, {
+          id: user.id,
+        });
 
-    if(locationDataExist){
-      throw new ConflictException("Location already exist!");
-    }
+        if (!userData) {
+          throw new ForbiddenException('Something went wrong! try again!');
+        }
 
-    let image;
-    if(selfies.length > 0){
-      const result = await this.cloudinary.uploadFile(selfies[0], 'selfies');
-      image = image ? image : await this.locationImage.create({
-        selfie: result['secure_url']
+        if (locationDataExist) {
+          throw new ConflictException('Location already exists!');
+        }
+
+        let image: LocationImage | null = null;
+        if (selfies.length > 0) {
+          const result = await this.cloudinary.uploadFile(
+            selfies[0],
+            'selfies',
+          );
+          uploadedFilePath.push(result.secure_url);
+          image = manager.create(LocationImage, {
+            selfie: result.secure_url,
+          });
+          await manager.save(LocationImage, image);
+        }
+
+        let doc: LocationDocs | null = null;
+        if (docs.length > 0) {
+          const result = await this.cloudinary.uploadFile(docs[0], 'documents');
+          uploadedFilePath.push(result.secure_url);
+          doc = manager.create(LocationDocs, {
+            doc: result.secure_url,
+            doc_type: 'NATIONAL_ID',
+          });
+          await manager.save(LocationDocs, doc);
+        }
+
+        const apiVerificationInfo = manager.create(
+          LocationApiVerificationInfo,
+          {
+            name: payload.full_name,
+            country: payload.country,
+            date_of_birth: payload.date_of_birth,
+            national_id: payload.nid_number,
+          },
+        );
+
+        await manager.save(LocationApiVerificationInfo, apiVerificationInfo);
+
+        const location = manager.create(Location, {
+          user: userData,
+          gps_code: payload.gps_code,
+          region: payload.region,
+          street_name: payload.street_name,
+          district: payload.district,
+          images: image ?? null,
+          doc: doc ?? null,
+          apiVerificationInfo: apiVerificationInfo,
+        } as DeepPartial<Location>);
+
+        return await manager.save(Location, location);
       });
+    } catch (err) {
+      for (const path of uploadedFilePath) {
+        const relativePath = this.cloudinary.extractPublicId(path);
+        await this.cloudinary.destroyFile(relativePath);
+      }
+      throw err;
     }
-
-    let doc;
-    if(docs.length > 0){
-      const result = await this.cloudinary.uploadFile(docs[0], 'documents');
-      doc = doc ? doc : await this.locationDoc.create({
-        doc: result['secure_url'],
-        doc_type: "NATIONAL_ID"
-      });
-    }
-
-    if(image){
-      await this.locationImage.save(image);
-    }
-
-    if(doc){
-      await this.locationDoc.save(doc);
-    }
-
-    const apiVerificationInfo = await this.locationApiVerificationInfo.create({
-      name: payload.full_name,
-      country: payload.country,
-      date_of_birth: payload.date_of_birth,
-      national_id: payload.nid_number
-    });
-
-    await this.locationApiVerificationInfo.save(apiVerificationInfo);
-
-    const location = await this.location.create({
-      user: user.id,
-      images: image ?? null,
-      doc: doc ?? null,
-      gps_code: payload.gps_code,
-      region: payload.region,
-      street_name: payload.street_name,
-      district: payload.district,
-      apiVerificationInfo: apiVerificationInfo
-    });
-
-    return await this.location.save(location);
-
   }
 
   async createLocationVerification(
-    payload: CreateLocationForVerifyDto, 
-    photos: Express.Multer.File[]
-  ){
+    user,
+    payload: CreateLocationForVerifyDto,
+    photos: Express.Multer.File[],
+  ) {
+    const uploadedFilePath: string[] = [];
 
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        const locationData = await manager.findOneBy(Location, {
+          gps_code: payload.gps_code,
+        });
+
+        if (locationData) {
+          throw new ConflictException('Location already exist!');
+        }
+
+        const userData = await manager.findOneBy(User, {
+          id: user.id,
+        });
+
+        if (!userData) {
+          throw new NotFoundException('Something went wrong! try again');
+        }
+
+        let image: LocationImage | null = null;
+        if (photos.length > 0) {
+          const imageUrls = await Promise.all(
+            photos.map(async (photo) => {
+              const result = await this.cloudinary.uploadFile(photo);
+              uploadedFilePath.push(result.secure_url);
+              return result.secure_url;
+            }),
+          );
+          image = await manager.create(LocationImage, {
+            images: imageUrls,
+          });
+          await manager.save(LocationImage, image);
+        }
+
+        const location = await manager.create(Location, {
+          gps_code: payload.gps_code,
+          street_name: payload.street_name,
+          region: payload.region,
+          district: payload.district,
+          images: image ?? null,
+          user: userData,
+        } as DeepPartial<Location>);
+
+        return await manager.save(Location, location);
+      });
+    } catch (err) {
+      for (const path of uploadedFilePath) {
+        const relativePath = this.cloudinary.extractPublicId(path);
+        await this.cloudinary.destroyFile(relativePath);
+      }
+      throw err;
+    }
   }
 
-  async createLocationAgentCode(payload: CreateLocationAgentCodeDto){
+  async createLocationAgentCode(user, payload: CreateLocationAgentCodeDto) {
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        const locationData = await manager.findOneBy(Location, {
+          gps_code: payload.gps_code,
+        });
 
+        if (locationData) {
+          throw new ConflictException('Location already exist!');
+        }
+
+        const userData = await manager.findOneBy(User, {
+          id: user.id,
+        });
+
+        if (!userData) {
+          throw new NotFoundException('Something went wrong! try again');
+        }
+
+        const location = await manager.create(Location, {
+          gps_code: payload.gps_code,
+          street_name: payload.street_name,
+          region: payload.region,
+          district: payload.district,
+          agent_code: payload.agent_code,
+          user: userData,
+        } as DeepPartial<Location>);
+
+        return await manager.save(Location, location);
+      });
+    } catch (err) {
+      throw err;
+    }
   }
 
-  async update(id: string, updateLocationDto: UpdateLocationDto) {
-    return `This action updates a #${id} location`;
+  async update(
+    id: string,
+    updateLocationDto: UpdateLocationDto,
+    user,
+    selfies: Express.Multer.File[],
+    photos: Express.Multer.File[],
+    docs: Express.Multer.File[]
+  ) {
+    return await this.dataSource.transaction(async (manager) => {
+      return await manager.findOne(Location, {
+        where: { id },
+        relations: ['doc', 'images', 'apiVerificationInfo']
+      })
+    });
   }
 
   async remove(id: string) {
@@ -255,57 +415,61 @@ export class LocationService {
   async sendVerificationOtpMessage(payload: SendVerificationOtpDto) {
     const generatedCode = this.emailService.generateNumericCode(6);
 
-    let phone = await this.verificationCode.findOneBy({phone: payload.phone});
+    let phone = await this.verificationCode.findOneBy({ phone: payload.phone });
 
-    if(phone){
+    if (phone) {
       phone.otp = generatedCode;
       await this.verificationCode.save(phone);
     } else {
-      phone = await this.verificationCode.create({...payload, otp: generatedCode, method: OtpSendMethod.SMS});
+      phone = await this.verificationCode.create({
+        ...payload,
+        otp: generatedCode,
+        method: OtpSendMethod.SMS,
+      });
       phone = await this.verificationCode.save(phone);
     }
     // @TODO:send local message
 
     //generate token
     const jwtPayload = {
-      phone_id: phone.id
-    }
+      phone_id: phone.id,
+    };
 
     const token = await this.jwtService.signAsync(jwtPayload);
 
     return {
       sms_token: token,
-      otp: generatedCode //@TODO: need to remove from here
+      otp: generatedCode, //@TODO: need to remove from here
     };
   }
 
-  async verifyOtp(payload:OtpVerificationDto){
+  async verifyOtp(payload: OtpVerificationDto) {
     const isMatched = await this.jwtService.verifyAsync(payload.sms_token);
-    if(!isMatched){
-      throw new ForbiddenException("Otp expired! try again");
+    if (!isMatched) {
+      throw new ForbiddenException('Otp expired! try again');
     }
 
-    const {phone_id} = this.jwtService.decode(payload.sms_token);
+    const { phone_id } = this.jwtService.decode(payload.sms_token);
 
-    const code = await this.verificationCode.findOneBy({id: phone_id});
+    const code = await this.verificationCode.findOneBy({ id: phone_id });
 
-    if(!code){
-      throw new NotFoundException("Something went wrong! try again");
+    if (!code) {
+      throw new NotFoundException('Something went wrong! try again');
     }
 
-    if(code.otp !== payload.otp){
-      throw new ForbiddenException("Otp did not matched! try again");
+    if (code.otp !== payload.otp) {
+      throw new ForbiddenException('Otp did not matched! try again');
     }
 
     const jwtPayload = {
       code_id: code.id,
-      phone: code.phone
-    }
+      phone: code.phone,
+    };
 
     const verified_token = await this.jwtService.signAsync(jwtPayload);
 
     return {
-      verified_token
-    }
+      verified_token,
+    };
   }
 }
