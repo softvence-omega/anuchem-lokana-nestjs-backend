@@ -27,6 +27,7 @@ import { LocationImage } from './entities/location-selfie.entity';
 import { LocationDocs } from './entities/location-docs.entity';
 import { CloudinaryService } from 'src/common/cloudinary/cloudinary.service';
 import { User } from '../user/entities/user.entity';
+import { LocationReaction, ReactionType } from './entities/location-reaction';
 
 @Injectable()
 export class LocationService {
@@ -405,89 +406,113 @@ export class LocationService {
 
     try {
       return await this.dataSource.transaction(async (manager) => {
-        const locationDataExist = await manager.findOne(Location, {
+        const location = await manager.findOne(Location, {
           where: { id },
-          relations: ['doc', 'images', 'apiVerificationInfo']
-        })
-
-        if (!locationDataExist) {
-          throw new NotFoundException('Location not found!');
-        }
-
-        const userData = await manager.findOneBy(User, {
-          id: user.id,
+          relations: ['images', 'doc', 'apiVerificationInfo', 'user'],
         });
 
-        if (!userData) {
-          throw new ForbiddenException('Something went wrong! try again!');
+        if (!location) {
+          throw new NotFoundException('Location not found');
         }
 
-        if (userData.id !== locationDataExist.user.id) {
-          throw new ForbiddenException("Only owner can update this location!");
+        if (location.user.id !== user.id) {
+          throw new ForbiddenException('Only the owner can update this location');
         }
 
-        let image: LocationImage | null = null;
         if (selfies.length > 0) {
-          const result = await this.cloudinary.uploadFile(
-            selfies[0],
-            'selfies',
-          );
+          const result = await this.cloudinary.uploadFile(selfies[0], 'selfies');
           uploadedFilePath.push(result.secure_url);
 
-          if (locationDataExist.images.selfie) {
-            image = await manager.findOne(LocationImage, {
-              where: { id: locationDataExist.images.id }
-            });
-
-            if (!image) {
-              throw new InternalServerErrorException('Something went wrong!');
-            }
-
-            image.selfie = result.secure_url;
-            await manager.save(LocationImage, image);
-            const relativePath = this.cloudinary.extractPublicId(locationDataExist.images.selfie);
+          if (location.images?.selfie) {
+            const relativePath = this.cloudinary.extractPublicId(location.images.selfie);
             await this.cloudinary.destroyFile(relativePath);
+            location.images.selfie = result.secure_url;
           } else {
-            image = manager.create(LocationImage, {
-              selfie: result.secure_url,
-            });
-            await manager.save(LocationImage, image);
+            if (!location.images) {
+              location.images = manager.create(LocationImage, {});
+            }
+            location.images.selfie = result.secure_url;
           }
         }
 
-        let doc: LocationDocs | null = null;
+        if (photos.length > 0) {
+          const photoUrls = await Promise.all(
+            photos.map(async (photo) => {
+              const result = await this.cloudinary.uploadFile(photo, 'location_photos');
+              uploadedFilePath.push(result.secure_url);
+              return result.secure_url;
+            }),
+          );
+
+          if (location.images?.images?.length) {
+            for (const oldUrl of location.images.images) {
+              const relativePath = this.cloudinary.extractPublicId(oldUrl);
+              await this.cloudinary.destroyFile(relativePath);
+            }
+          }
+
+          if (!location.images) {
+            location.images = manager.create(LocationImage, {});
+          }
+
+          location.images.images = photoUrls;
+        }
+
+        if (location.images) {
+          await manager.save(LocationImage, location.images);
+        }
+
         if (docs.length > 0) {
           const result = await this.cloudinary.uploadFile(docs[0], 'documents');
           uploadedFilePath.push(result.secure_url);
-          doc = manager.create(LocationDocs, {
-            doc: result.secure_url,
-            doc_type: 'NATIONAL_ID',
-          });
-          await manager.save(LocationDocs, doc);
+
+          if (location.doc?.doc) {
+            const relativePath = this.cloudinary.extractPublicId(location.doc.doc);
+            await this.cloudinary.destroyFile(relativePath);
+            location.doc.doc = result.secure_url;
+          } else {
+            const newDoc = manager.create(LocationDocs, {
+              doc: result.secure_url,
+              doc_type: 'NATIONAL_ID',
+            });
+            await manager.save(LocationDocs, newDoc);
+            location.doc = newDoc;
+          }
+
+          if (location.doc) {
+            await manager.save(LocationDocs, location.doc);
+          }
         }
 
-        const apiVerificationInfo = manager.create(
-          LocationApiVerificationInfo,
-          {
-            name: payload.full_name,
-            country: payload.country,
-            date_of_birth: payload.date_of_birth,
-            national_id: payload.nid_number,
-          },
-        );
+        if (
+          payload.full_name &&
+          payload.nid_number &&
+          payload.country &&
+          payload.date_of_birth
+        ) {
+          if (location.apiVerificationInfo) {
+            location.apiVerificationInfo.name = payload.full_name;
+            location.apiVerificationInfo.national_id = payload.nid_number;
+            location.apiVerificationInfo.country = payload.country;
+            location.apiVerificationInfo.date_of_birth = payload.date_of_birth;
+            await manager.save(LocationApiVerificationInfo, location.apiVerificationInfo);
+          } else {
+            const apiInfo = manager.create(LocationApiVerificationInfo, {
+              name: payload.full_name,
+              national_id: payload.nid_number,
+              country: payload.country,
+              date_of_birth: payload.date_of_birth,
+            });
+            await manager.save(LocationApiVerificationInfo, apiInfo);
+            location.apiVerificationInfo = apiInfo;
+          }
+        }
 
-        await manager.save(LocationApiVerificationInfo, apiVerificationInfo);
-
-        const location = manager.create(Location, {
-          user: userData,
-          gps_code: payload.gps_code,
-          region: payload.region,
-          street_name: payload.street_name,
-          district: payload.district,
-          images: image ?? null,
-          doc: doc ?? null,
-          apiVerificationInfo: apiVerificationInfo,
-        } as DeepPartial<Location>);
+        /** === 5. Update Basic Fields === **/
+        location.gps_code = payload.gps_code ?? location.gps_code;
+        location.region = payload.region ?? location.region;
+        location.district = payload.district ?? location.district;
+        location.street_name = payload.street_name ?? location.street_name;
 
         return await manager.save(Location, location);
       });
@@ -500,9 +525,62 @@ export class LocationService {
     }
   }
 
-  async remove(id: string) {
-    return `This action removes a #${id} location`;
+
+  async remove(id: string, user) {
+    const location = await this.location.findOne({
+      where: { id },
+      relations: ['images', 'doc', 'apiVerificationInfo', 'user'],
+    });
+
+    if (!location) {
+      throw new NotFoundException(`Location not found`);
+    }
+
+    if (location.user.id !== user.id) {
+      throw new ForbiddenException('Only the owner can delete this location');
+    }
+
+    const toDeleteCloudinaryPaths: string[] = [];
+
+    if (location.images?.selfie) {
+      toDeleteCloudinaryPaths.push(location.images.selfie);
+    }
+
+    if (location.images?.images?.length) {
+      toDeleteCloudinaryPaths.push(...location.images.images);
+    }
+
+    if (location.doc?.doc) {
+      toDeleteCloudinaryPaths.push(location.doc.doc);
+    }
+
+    await this.dataSource.transaction(async (manager) => {
+      // Delete associated entities
+      if (location.images) {
+        await manager.delete(LocationImage, location.images.id);
+      }
+
+      if (location.doc) {
+        await manager.delete(LocationDocs, location.doc.id);
+      }
+
+      if (location.apiVerificationInfo) {
+        await manager.delete(LocationApiVerificationInfo, location.apiVerificationInfo.id);
+      }
+
+      // Delete main location
+      await manager.delete(Location, id);
+    });
+
+    // Remove Cloudinary files
+    for (const path of toDeleteCloudinaryPaths) {
+      const relativePath = this.cloudinary.extractPublicId(path);
+      await this.cloudinary.destroyFile(relativePath);
+    }
+
+    return { message: 'Location deleted successfully' };
   }
+
 
   async sendVerificationOtpMessage(payload: SendVerificationOtpDto) {
     const generatedCode = this.emailService.generateNumericCode(6);
@@ -563,5 +641,61 @@ export class LocationService {
     return {
       verified_token,
     };
+  }
+
+  async reactToLocation(
+    user,
+    locationId: string,
+    reaction: ReactionType,
+  ): Promise<{ like_count: number; dislike_count: number }> {
+    return this.dataSource.transaction(async (manager) => {
+      const locationRepo = manager.getRepository(Location);
+      const reactionRepo = manager.getRepository(LocationReaction);
+
+      const location = await locationRepo.findOne({ where: { id: locationId } });
+      if (!location) throw new NotFoundException('Location not found');
+
+      let existingReaction = await reactionRepo.findOne({
+        where: { user: { id: user.id }, location: { id: locationId } },
+        relations: ['user', 'location'],
+      });
+
+      if (!existingReaction) {
+        // No reaction before: create new
+        existingReaction = reactionRepo.create({
+          user,
+          location,
+          reactionType: reaction,
+        });
+        await reactionRepo.save(existingReaction);
+
+        if (reaction === ReactionType.LIKE) location.like_count++;
+        else location.dislike_count++;
+
+      } else if (existingReaction.reactionType === reaction) {
+        // Same reaction clicked again: remove it (toggle off)
+        await reactionRepo.remove(existingReaction);
+
+        if (reaction === ReactionType.LIKE) location.like_count--;
+        else location.dislike_count--;
+
+      } else {
+        // Different reaction: update reactionType and update counts
+        if (existingReaction.reactionType === ReactionType.LIKE) {
+          location.like_count--;
+          location.dislike_count++;
+        } else {
+          location.dislike_count--;
+          location.like_count++;
+        }
+
+        existingReaction.reactionType = reaction;
+        await reactionRepo.save(existingReaction);
+      }
+
+      await locationRepo.save(location);
+
+      return { like_count: location.like_count, dislike_count: location.dislike_count };
+    });
   }
 }

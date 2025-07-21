@@ -52,4 +52,10 @@ export class Location extends AbstractEntity {
     })
     @JoinColumn()
     apiVerificationInfo: LocationApiVerificationInfo;
+
+    @Column({ default: 0 })
+    like_count: number;
+
+    @Column({ default: 0 })
+    dislike_count: number;
 }

@@ -9,6 +9,7 @@ import { LocationImage } from './entities/location-selfie.entity';
 import { LocationApiVerificationInfo } from './entities/location-api-verification-info.entity';
 import { LocationDocs } from './entities/location-docs.entity';
 import { JwtHelperModule } from 'src/config/jwt.module';
+import { LocationReaction } from './entities/location-reaction';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { JwtHelperModule } from 'src/config/jwt.module';
       LocationImage,
       LocationApiVerificationInfo,
       LocationDocs,
+      LocationReaction
     ]),
     CommonModule,
     JwtHelperModule,
@@ -25,4 +27,4 @@ import { JwtHelperModule } from 'src/config/jwt.module';
   controllers: [LocationController],
   providers: [LocationService],
 })
-export class LocationModule {}
+export class LocationModule { }

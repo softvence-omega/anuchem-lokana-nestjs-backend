@@ -21,8 +21,7 @@ services:
       SMTP_AUTH_PASS: "hxyn gshj lbzt zwbd"
       SMS_API_KEY: "atsk_8c72c7d28135487f97205ede483bbab8cd19829908dafc14136d20c25bd582ba48bb80d5"
     volumes:
-      - .:/app               # Sync host code to container
-      - /app/node_modules    # Prevent overwriting node_modules
+      - /app/node_modules # Prevent overwriting node_modules
       - ./uploads:/app/uploads
     command: npm run start:dev
     networks:
@@ -50,6 +49,7 @@ services:
 volumes:
   pgdata:
   uploads:
+
 
 networks:
   nest-network:
