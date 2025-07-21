@@ -3,7 +3,7 @@ import { CreateLocationNidOcrDto } from './create-location-nid-ocr.dto';
 import { IsString } from 'class-validator';
 
 export class CreateLocationApiVerificationDto extends PartialType(
-    OmitType(CreateLocationNidOcrDto, ['photos']),
+    OmitType(CreateLocationNidOcrDto, ['photos'])
 ) {
     @ApiProperty({ example: "John Doe", type: "string" })
     @IsString()

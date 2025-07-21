@@ -18,5 +18,7 @@ const swaggerConfig = new DocumentBuilder()
 
 export function setupSwagger(app: INestApplication) {
   const document = () => SwaggerModule.createDocument(app, swaggerConfig);
-  return SwaggerModule.setup('docs', app, document);
+  return SwaggerModule.setup('docs', app, document, {
+    customSiteTitle: "Lokana Backend"
+  });
 }

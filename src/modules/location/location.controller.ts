@@ -11,7 +11,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { LocationService } from './location.service';
-import { ApiConsumes, ApiSecurity } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiSecurity } from '@nestjs/swagger';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { CreateLocationSimSelfieDto } from './dto/create-location-sim-selfie.dto';
 import { sendResponse } from 'src/common/utils/sendResponse';
@@ -93,6 +93,10 @@ export class LocationController {
 
   @ApiSecurity('accessToken')
   @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'API Verification with selfie and document',
+    type: CreateLocationApiVerificationDto,
+  })
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'doc', maxCount: 1 },

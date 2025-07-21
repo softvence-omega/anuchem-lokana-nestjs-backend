@@ -2,6 +2,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { UpdateLocationDto } from './dto/update-location.dto';
@@ -394,18 +395,109 @@ export class LocationService {
 
   async update(
     id: string,
-    updateLocationDto: UpdateLocationDto,
+    payload: UpdateLocationDto,
     user,
     selfies: Express.Multer.File[],
     photos: Express.Multer.File[],
     docs: Express.Multer.File[]
   ) {
-    return await this.dataSource.transaction(async (manager) => {
-      return await manager.findOne(Location, {
-        where: { id },
-        relations: ['doc', 'images', 'apiVerificationInfo']
-      })
-    });
+    const uploadedFilePath: string[] = [];
+
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        const locationDataExist = await manager.findOne(Location, {
+          where: { id },
+          relations: ['doc', 'images', 'apiVerificationInfo']
+        })
+
+        if (!locationDataExist) {
+          throw new NotFoundException('Location not found!');
+        }
+
+        const userData = await manager.findOneBy(User, {
+          id: user.id,
+        });
+
+        if (!userData) {
+          throw new ForbiddenException('Something went wrong! try again!');
+        }
+
+        if (userData.id !== locationDataExist.user.id) {
+          throw new ForbiddenException("Only owner can update this location!");
+        }
+
+        let image: LocationImage | null = null;
+        if (selfies.length > 0) {
+          const result = await this.cloudinary.uploadFile(
+            selfies[0],
+            'selfies',
+          );
+          uploadedFilePath.push(result.secure_url);
+
+          if (locationDataExist.images.selfie) {
+            image = await manager.findOne(LocationImage, {
+              where: { id: locationDataExist.images.id }
+            });
+
+            if (!image) {
+              throw new InternalServerErrorException('Something went wrong!');
+            }
+
+            image.selfie = result.secure_url;
+            await manager.save(LocationImage, image);
+            const relativePath = this.cloudinary.extractPublicId(locationDataExist.images.selfie);
+            await this.cloudinary.destroyFile(relativePath);
+          } else {
+            image = manager.create(LocationImage, {
+              selfie: result.secure_url,
+            });
+            await manager.save(LocationImage, image);
+          }
+        }
+
+        let doc: LocationDocs | null = null;
+        if (docs.length > 0) {
+          const result = await this.cloudinary.uploadFile(docs[0], 'documents');
+          uploadedFilePath.push(result.secure_url);
+          doc = manager.create(LocationDocs, {
+            doc: result.secure_url,
+            doc_type: 'NATIONAL_ID',
+          });
+          await manager.save(LocationDocs, doc);
+        }
+
+        const apiVerificationInfo = manager.create(
+          LocationApiVerificationInfo,
+          {
+            name: payload.full_name,
+            country: payload.country,
+            date_of_birth: payload.date_of_birth,
+            national_id: payload.nid_number,
+          },
+        );
+
+        await manager.save(LocationApiVerificationInfo, apiVerificationInfo);
+
+        const location = manager.create(Location, {
+          user: userData,
+          gps_code: payload.gps_code,
+          region: payload.region,
+          street_name: payload.street_name,
+          district: payload.district,
+          images: image ?? null,
+          doc: doc ?? null,
+          apiVerificationInfo: apiVerificationInfo,
+        } as DeepPartial<Location>);
+
+        return await manager.save(Location, location);
+      });
+    } catch (err) {
+      for (const path of uploadedFilePath) {
+        const relativePath = this.cloudinary.extractPublicId(path);
+        await this.cloudinary.destroyFile(relativePath);
+      }
+      throw err;
+    }
   }
 
   async remove(id: string) {
