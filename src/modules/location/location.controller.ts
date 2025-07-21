@@ -22,6 +22,7 @@ import { CreateLocationAgentCodeDto } from './dto/create-location-agent-code.dto
 import { UpdateLocationDto } from './dto/update-location.dto';
 import { SendVerificationOtpDto } from './dto/sendVerificationOtp.dto';
 import { OtpVerificationDto } from './dto/otp-verification.dto';
+import { LocationReactionDto } from './dto/location-reaction.dto';
 
 @Controller('location')
 export class LocationController {
@@ -93,10 +94,6 @@ export class LocationController {
 
   @ApiSecurity('accessToken')
   @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    description: 'API Verification with selfie and document',
-    type: CreateLocationApiVerificationDto,
-  })
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'doc', maxCount: 1 },
@@ -128,7 +125,7 @@ export class LocationController {
   @ApiSecurity('accessToken')
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileFieldsInterceptor([{ name: 'photos', maxCount: 3 }]))
-  @Post('api-verification')
+  @Post('community')
   async createLocationVerification(
     @Req() req,
     @Body() payload: CreateLocationForVerifyDto,
@@ -185,8 +182,9 @@ export class LocationController {
 
   @ApiSecurity('accessToken')
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.locationService.remove(id);
+  async remove(@Param('id') id: string, @Req() req) {
+    const result = await this.locationService.remove(id, req.user);
+    return sendResponse("Location removed successfully!", result);
   }
 
   @ApiSecurity('accessToken')
@@ -203,4 +201,20 @@ export class LocationController {
     const result = await this.locationService.verifyOtp(payload);
     return sendResponse('Otp has been verified successfully!', result);
   }
+
+  @ApiSecurity('accessToken')
+  @Post(':id/reaction')
+  async reactToLocation(
+    @Req() req,
+    @Param('id') locationId: string,
+    @Body() payload: LocationReactionDto,
+  ) {
+    const user = req.user;
+    const { reactionType } = payload;
+
+    const result = await this.locationService.reactToLocation(user, locationId, reactionType);
+
+    return sendResponse('Reaction updated successfully!', result);
+  }
+
 }
