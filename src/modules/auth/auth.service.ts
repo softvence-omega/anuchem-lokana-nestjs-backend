@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from 'src/common/nodemailer/email.service';
@@ -12,19 +16,22 @@ import { RegisterAuthDto } from './dto/register-auth.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { User } from '../user/entities/user.entity';
 import { BcryptService } from 'src/common/bcrypt/bcrypt.service';
-import { OtpSendMethod, VerificaitonCode } from '../user/entities/verification-code.entity';
+import {
+  OtpSendMethod,
+  VerificaitonCode,
+} from '../user/entities/verification-code.entity';
 
 @Injectable()
 export class AuthService {
-
   constructor(
     @InjectRepository(User) private userRepository: Repository<User>,
-    @InjectRepository(VerificaitonCode) private verificationCodeRepository: Repository<VerificaitonCode>,
+    @InjectRepository(VerificaitonCode)
+    private verificationCodeRepository: Repository<VerificaitonCode>,
     private config: ConfigService,
     private jwtService: JwtService,
     private emailService: EmailService,
-    private bcrypt: BcryptService
-  ) { }
+    private bcrypt: BcryptService,
+  ) {}
 
   async login(payload: LoginAuthDto) {
     const user = await this.userRepository.findOneBy({ email: payload.email });
@@ -32,7 +39,10 @@ export class AuthService {
       throw new NotFoundException('User not exist!');
     }
 
-    const matched = await this.bcrypt.comparePasswords(payload.password, user.password);
+    const matched = await this.bcrypt.comparePasswords(
+      payload.password,
+      user.password,
+    );
     if (!matched) {
       throw new ForbiddenException('Email or Password Invalid!');
     }
@@ -77,7 +87,6 @@ export class AuthService {
     </div>
     `;
 
-
     const user = await this.userRepository.findOneBy({ email: payload.email });
 
     if (user) {
@@ -88,18 +97,23 @@ export class AuthService {
       {
         email: payload.email,
         method: OtpSendMethod.EMAIL,
-        otp: generatedOtp
+        otp: generatedOtp,
       },
-      ['email']
+      ['email'],
     );
 
-    await this.emailService.sendMail(payload.email, "Email verification mail", text, html);
+    await this.emailService.sendMail(
+      payload.email,
+      'Email verification mail',
+      text,
+      html,
+    );
 
-    const jwtPayload = { ...payload }
+    const jwtPayload = { ...payload };
     const verificationToken = await this.jwtService.signAsync(jwtPayload);
 
     return {
-      verificationToken
+      verificationToken,
     };
   }
 
@@ -115,8 +129,8 @@ export class AuthService {
     const data = await this.verificationCodeRepository.create({
       email: user.email,
       otp: generatedOtp,
-      method: OtpSendMethod.EMAIL
-    })
+      method: OtpSendMethod.EMAIL,
+    });
 
     await this.verificationCodeRepository.save(data);
 
@@ -184,26 +198,28 @@ export class AuthService {
     let code;
     if (decode.id) {
       user = await this.userRepository.findOneBy({ id: decode.id });
-      code = await this.verificationCodeRepository.findOneBy({ email: user.email });
+      code = await this.verificationCodeRepository.findOneBy({
+        email: user.email,
+      });
 
       if (!code) {
         throw new ForbiddenException('Something went wrong, try again!');
       }
 
       if (payload.otp !== code.otp) {
-        throw new ForbiddenException("Otp not matched!, try again!");
+        throw new ForbiddenException('Otp not matched!, try again!');
       }
-
     } else {
-
-      code = await this.verificationCodeRepository.findOneBy({ email: decode.email });
+      code = await this.verificationCodeRepository.findOneBy({
+        email: decode.email,
+      });
 
       if (!code) {
-        throw new ForbiddenException("Something went wrong, try again!");
+        throw new ForbiddenException('Something went wrong, try again!');
       }
 
       if (payload.otp !== code.otp) {
-        throw new ForbiddenException("Otp not matched, try again!");
+        throw new ForbiddenException('Otp not matched, try again!');
       }
 
       decode.password = await this.bcrypt.hashPassword(decode.password);
@@ -228,13 +244,13 @@ export class AuthService {
       });
 
       return {
-        resetToken
-      }
+        resetToken,
+      };
     } else {
       jwtPayload = {
         id: user.id,
-        role: user.role
-      }
+        role: user.role,
+      };
 
       const accessToken = await this.jwtService.signAsync(jwtPayload);
 
@@ -243,11 +259,10 @@ export class AuthService {
         user: {
           id: user.id,
           email: user.email,
-          role: user.role
-        }
-      }
+          role: user.role,
+        },
+      };
     }
-
   }
 
   async resetPassword(payload: ResetPasswordAuthDto) {
@@ -274,13 +289,16 @@ export class AuthService {
   }
 
   async changePassword(user, payload: ChangePasswordAuthDto) {
-    const userData = await this.userRepository.findOneBy({ id: user.id })
+    const userData = await this.userRepository.findOneBy({ id: user.id });
 
     if (!userData) {
       throw new NotFoundException('Something went wrong!');
     }
 
-    const matched = await this.bcrypt.comparePasswords(payload.oldPassword, userData.password);
+    const matched = await this.bcrypt.comparePasswords(
+      payload.oldPassword,
+      userData.password,
+    );
 
     if (!matched) {
       throw new ForbiddenException('Old password not matched!');

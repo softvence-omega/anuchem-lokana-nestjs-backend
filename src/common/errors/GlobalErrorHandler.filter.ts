@@ -19,8 +19,7 @@ export class GlobalErrorHandler implements ExceptionFilter {
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const res = exception.getResponse();
-      message =
-        typeof res === 'string' ? res : (res as any).message || message;
+      message = typeof res === 'string' ? res : (res as any).message || message;
     } else if (exception instanceof Error) {
       message = exception.message;
     }
@@ -29,7 +28,7 @@ export class GlobalErrorHandler implements ExceptionFilter {
       statusCode: status,
       path: request.url,
       message,
-      success: false
+      success: false,
     });
   }
 }
