@@ -10,4 +10,4 @@ import { CommonModule } from 'src/common/common.module';
   controllers: [UserController],
   providers: [UserService],
 })
-export class UserModule { }
+export class UserModule {}

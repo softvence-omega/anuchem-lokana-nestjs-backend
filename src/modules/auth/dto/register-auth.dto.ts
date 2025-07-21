@@ -3,23 +3,26 @@ import { IsEmail, IsEnum, IsOptional, IsString, Min } from 'class-validator';
 import { Role } from 'src/modules/user/entities/user.entity';
 
 export class RegisterAuthDto {
-  @ApiProperty({ example: "John Doe" })
+  @ApiProperty({ example: 'John Doe' })
   @IsString()
   name: string;
 
-  @ApiProperty({ example: "john.doe@gmail.com", type: 'string' })
+  @ApiProperty({ example: 'john.doe@gmail.com', type: 'string' })
   @IsEmail()
   email: string;
 
-  @ApiProperty({ example: "strong@1234", type: 'string' })
+  @ApiProperty({ example: 'strong@1234', type: 'string' })
   @IsString()
   password: string;
 
-  @ApiProperty({ example: "123-1398433", type: 'string' })
+  @ApiProperty({ example: '123-1398433', type: 'string' })
   @IsString()
   phone: string;
 
-  @ApiProperty({ example: "Bir uttom ak khandaker Road, Mohakhali", type: 'string' })
+  @ApiProperty({
+    example: 'Bir uttom ak khandaker Road, Mohakhali',
+    type: 'string',
+  })
   @IsString()
   @IsOptional()
   address: string;
