@@ -9,9 +9,10 @@ import {
   UseInterceptors,
   UploadedFiles,
   Req,
+  Query,
 } from '@nestjs/common';
 import { LocationService } from './location.service';
-import { ApiBody, ApiConsumes, ApiSecurity } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiQuery, ApiSecurity } from '@nestjs/swagger';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { CreateLocationSimSelfieDto } from './dto/create-location-sim-selfie.dto';
 import { sendResponse } from 'src/common/utils/sendResponse';
@@ -217,4 +218,23 @@ export class LocationController {
     return sendResponse('Reaction updated successfully!', result);
   }
 
+  @ApiSecurity("accessToken")
+  @Get('self')
+  async getMyLocations(@Req() req) {
+    const result = await this.locationService.getMyLocations(req.user);
+    return sendResponse("Your created all locations are fetched!", result);
+  }
+
+
+  @ApiSecurity("accessToken")
+  @Get('nearby')
+  @ApiQuery({ name: 'lat', type: 'number', example: 51.5074 })
+  @ApiQuery({ name: 'lng', type: 'number', example: -0.123 })
+  async getLocationsInTwentyKilometer(
+    @Query('lat') latitude: number,
+    @Query('lng') longitude: number,
+  ) {
+    const result = await this.locationService.getLocationsInTwentyKilometer(latitude, longitude);
+    return sendResponse('Nearby locations within 20km fetched successfully.', result);
+  }
 }

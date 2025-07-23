@@ -6,6 +6,7 @@ import { DatabaseModule } from './config/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { LocationModule } from './modules/location/location.module';
 import { UserModule } from './modules/user/user.module';
+import { RewardModule } from './modules/reward/reward.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { UserModule } from './modules/user/user.module';
     AuthModule,
     LocationModule,
     UserModule,
+    RewardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

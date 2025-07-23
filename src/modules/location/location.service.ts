@@ -28,6 +28,7 @@ import { LocationDocs } from './entities/location-docs.entity';
 import { CloudinaryService } from 'src/common/cloudinary/cloudinary.service';
 import { User } from '../user/entities/user.entity';
 import { LocationReaction, ReactionType } from './entities/location-reaction';
+import { HelperService } from 'src/common/utils/helper.service';
 
 @Injectable()
 export class LocationService {
@@ -35,15 +36,10 @@ export class LocationService {
     private emailService: EmailService,
     private jwtService: JwtService,
     private cloudinary: CloudinaryService,
+    private helper: HelperService,
     @InjectRepository(VerificaitonCode)
     private verificationCode: Repository<VerificaitonCode>,
     @InjectRepository(Location) private location: Repository<Location>,
-    @InjectRepository(LocationApiVerificationInfo)
-    private locationApiVerificationInfo: Repository<LocationApiVerificationInfo>,
-    @InjectRepository(LocationImage)
-    private locationImage: Repository<LocationImage>,
-    @InjectRepository(LocationDocs)
-    private locationDoc: Repository<LocationDocs>,
     @InjectDataSource() private dataSource: DataSource,
   ) { }
 
@@ -697,5 +693,39 @@ export class LocationService {
 
       return { like_count: location.like_count, dislike_count: location.dislike_count };
     });
+  }
+
+  async getMyLocations(user) {
+    const locationsData = await this.location.find({
+      where: { user: user.id },
+      relations: ["apiLocationInfo", "doc", "images"]
+    });
+
+    if (!locationsData) {
+      throw new NotFoundException("You haven't create any locations!");
+    }
+
+    return locationsData;
+  }
+
+  async getLocationsInTwentyKilometer(
+    latitude: number,
+    longitude: number,
+  ): Promise<Location[]> {
+    const allLocations = await this.location.find();
+
+    const nearbyLocations = allLocations.filter((loc) => {
+      if (!loc.gps_code) return false;
+
+      try {
+        const { latitude: lat2, longitude: lon2 } = this.helper.parseGpsCode(loc.gps_code);
+        const distance = this.helper.haversineDistance(latitude, longitude, lat2, lon2);
+        return distance <= 20;
+      } catch (e) {
+        return false
+      }
+    });
+
+    return nearbyLocations;
   }
 }
