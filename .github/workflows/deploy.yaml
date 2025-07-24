@@ -41,7 +41,6 @@ jobs:
           username: root
           password: ${{ secrets.VPS_PASSWORD }}
           script: |
-            cd /path/to/your/project
             docker-compose down --remove-orphans
             docker-compose rm -f
             docker-compose pull
