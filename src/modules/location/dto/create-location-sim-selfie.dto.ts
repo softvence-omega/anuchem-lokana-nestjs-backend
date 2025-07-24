@@ -18,7 +18,7 @@ export class CreateLocationSimSelfieDto {
   @IsString()
   region: string;
 
-  @ApiProperty({ example: '1234-193847', type: 'string' })
+  @ApiProperty({ example: '+233241234567', type: 'string' })
   @IsString()
   phone: string;
 
