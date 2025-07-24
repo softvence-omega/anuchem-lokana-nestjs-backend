@@ -19,7 +19,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/preach:latest .
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/anuchem-server:latest .
 
       - name: Push Docker image
         run: |
