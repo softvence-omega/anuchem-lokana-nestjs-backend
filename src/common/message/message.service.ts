@@ -1,15 +1,13 @@
 // message.service.ts
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import africastalking from 'africastalking';
-// import * as Africastalking from 'africastalking';
 
 @Injectable()
 export class MessageService {
     private africasTalking;
 
     constructor(config: ConfigService) {
-        this.africasTalking = africastalking({
+        this.africasTalking = require("africastalking")({
             apiKey: config.getOrThrow("AFRICASTALKING_API_KEY"),
             username: config.getOrThrow("AFRICASTALKING_USERNAME")
         });

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   app:
     container_name: nestjs-app-dev
@@ -12,14 +10,16 @@ services:
       - "5001:5000"
     depends_on:
       - db
-    environment:
-      PORT: 5000
-      DATABASE_URL: "postgres://postgres:admin@db:5432/lokana_db"
-      JWT_SECRET_KEY: "840e1943f9fcba8a89864dfd5742dd037d802b4d"
-      JWT_EXPIRES_IN: "5h"
-      SMTP_AUTH_USER: "shahin.softvence@gmail.com"
-      SMTP_AUTH_PASS: "hxyn gshj lbzt zwbd"
-      SMS_API_KEY: "atsk_8c72c7d28135487f97205ede483bbab8cd19829908dafc14136d20c25bd582ba48bb80d5"
+    # environment:
+    #   PORT: 5000
+    #   DATABASE_URL: "postgres://postgres:admin@db:5432/lokana_db"
+    #   JWT_SECRET_KEY: "840e1943f9fcba8a89864dfd5742dd037d802b4d"
+    #   JWT_EXPIRES_IN: "5h"
+    #   SMTP_AUTH_USER: "shahin.softvence@gmail.com"
+    #   SMTP_AUTH_PASS: "hxyn gshj lbzt zwbd"
+    #   SMS_API_KEY: "atsk_8c72c7d28135487f97205ede483bbab8cd19829908dafc14136d20c25bd582ba48bb80d5"
+    env_file:
+      - .env
     volumes:
       - /app/node_modules # Prevent overwriting node_modules
       - ./uploads:/app/uploads
