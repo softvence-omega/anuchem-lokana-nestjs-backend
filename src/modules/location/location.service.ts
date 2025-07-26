@@ -694,8 +694,8 @@ export class LocationService {
 
   async getMyLocations(user) {
     const locationsData = await this.location.find({
-      where: { user: user.id },
-      relations: ["apiVerificationInfo", "doc", "images"]
+      where: { user: { id: user.id } },
+      relations: ["apiVerificationInfo", "doc", "images", "user"]
     });
 
     if (!locationsData) {
@@ -710,7 +710,7 @@ export class LocationService {
     longitude: number,
   ): Promise<Location[]> {
     const allLocations = await this.location.find({
-      relations: ["apiVerificationInfo", "doc", "images"]
+      relations: ["apiVerificationInfo", "doc", "images", "user"]
     });
 
     const nearbyLocations = allLocations.filter((loc) => {
