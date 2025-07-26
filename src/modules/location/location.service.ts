@@ -643,12 +643,12 @@ export class LocationService {
     user,
     locationId: string,
     reaction: ReactionType,
-  ): Promise<{ like_count: number; dislike_count: number }> {
-    return this.dataSource.transaction(async (manager) => {
+  ) {
+    const location = await this.dataSource.transaction(async (manager) => {
       const locationRepo = manager.getRepository(Location);
       const reactionRepo = manager.getRepository(LocationReaction);
 
-      const location = await locationRepo.findOne({ where: { id: locationId } });
+      const location = await locationRepo.findOne({ where: { id: locationId }, relations: ['apiVerificationInfo', 'images', 'doc', 'user'] });
       if (!location) throw new NotFoundException('Location not found');
 
       let existingReaction = await reactionRepo.findOne({
@@ -690,6 +690,17 @@ export class LocationService {
 
       return location;
     });
+
+    const usersReaction = await this.dataSource.manager.findOne(LocationReaction, {
+      where: { user: { id: user.id }, location: { id: locationId } },
+      relations: ['user', 'location'],
+    })
+
+    return instanceToPlain({
+      ...location,
+      isLike: usersReaction?.reactionType === ReactionType.LIKE,
+      isDislike: usersReaction?.reactionType === ReactionType.DISLIKE
+    });
   }
 
 
@@ -712,8 +723,8 @@ export class LocationService {
       const reaction = locationReaction.find((reaction) => reaction.location.id === location.id && reaction.user.id === location.user.id);
       return {
         ...location,
-        isLike: reaction?.reactionType === 'like',
-        isDislike: reaction?.reactionType === 'dislike'
+        isLike: reaction?.reactionType === ReactionType.LIKE,
+        isDislike: reaction?.reactionType === ReactionType.DISLIKE
       }
     })
 
@@ -750,8 +761,8 @@ export class LocationService {
       const reaction = locationReaction.find((reaction) => reaction.location.id === location.id && reaction.user.id === location.user.id);
       return {
         ...location,
-        isLike: reaction?.reactionType === 'like',
-        isDislike: reaction?.reactionType === 'dislike'
+        isLike: reaction?.reactionType === ReactionType.LIKE,
+        isDislike: reaction?.reactionType === ReactionType.DISLIKE
       }
     })
 
