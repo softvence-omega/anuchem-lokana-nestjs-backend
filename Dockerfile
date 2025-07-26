@@ -13,8 +13,6 @@ RUN npm install
 # Copy the rest of the application
 COPY . .
 
-# 👇 Create uploads folder (ensure it exists inside the container)
-
 # Build the app (NestJS -> dist/)
 RUN npm run build
 # Expose the port that the application listens on.

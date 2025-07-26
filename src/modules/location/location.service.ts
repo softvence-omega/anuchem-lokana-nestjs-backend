@@ -657,7 +657,6 @@ export class LocationService {
       });
 
       if (!existingReaction) {
-        // No reaction before: create new
         existingReaction = reactionRepo.create({
           user,
           location,
@@ -669,14 +668,12 @@ export class LocationService {
         else location.dislike_count++;
 
       } else if (existingReaction.reactionType === reaction) {
-        // Same reaction clicked again: remove it (toggle off)
         await reactionRepo.remove(existingReaction);
 
         if (reaction === ReactionType.LIKE) location.like_count--;
         else location.dislike_count--;
 
       } else {
-        // Different reaction: update reactionType and update counts
         if (existingReaction.reactionType === ReactionType.LIKE) {
           location.like_count--;
           location.dislike_count++;
@@ -698,7 +695,7 @@ export class LocationService {
   async getMyLocations(user) {
     const locationsData = await this.location.find({
       where: { user: user.id },
-      relations: ["apiLocationInfo", "doc", "images"]
+      relations: ["apiVerificationInfo", "doc", "images"]
     });
 
     if (!locationsData) {
@@ -712,7 +709,9 @@ export class LocationService {
     latitude: number,
     longitude: number,
   ): Promise<Location[]> {
-    const allLocations = await this.location.find();
+    const allLocations = await this.location.find({
+      relations: ["apiVerificationInfo", "doc", "images"]
+    });
 
     const nearbyLocations = allLocations.filter((loc) => {
       if (!loc.gps_code) return false;
