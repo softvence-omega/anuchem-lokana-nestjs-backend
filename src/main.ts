@@ -28,7 +28,7 @@ async function bootstrap() {
     }),
   );
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-    prefix: '/uploads/',
+    prefix: '/api/v1/uploads/',
   });
   await app.listen(port, () => {
     logger.log(`Application started successfully in port: ${port}`);
