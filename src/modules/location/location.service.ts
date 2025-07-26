@@ -2,7 +2,6 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
-  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { UpdateLocationDto } from './dto/update-location.dto';
@@ -29,6 +28,7 @@ import { CloudinaryService } from 'src/common/cloudinary/cloudinary.service';
 import { User } from '../user/entities/user.entity';
 import { LocationReaction, ReactionType } from './entities/location-reaction';
 import { HelperService } from 'src/common/utils/helper.service';
+import { instanceToPlain } from 'class-transformer';
 
 @Injectable()
 export class LocationService {
@@ -688,9 +688,10 @@ export class LocationService {
 
       await locationRepo.save(location);
 
-      return { like_count: location.like_count, dislike_count: location.dislike_count };
+      return location;
     });
   }
+
 
   async getMyLocations(user) {
     const locationsData = await this.location.find({
@@ -698,17 +699,32 @@ export class LocationService {
       relations: ["apiVerificationInfo", "doc", "images", "user"]
     });
 
-    if (!locationsData) {
-      throw new NotFoundException("You haven't create any locations!");
+    if (!locationsData || locationsData.length === 0) {
+      throw new NotFoundException("You haven't created any locations!");
     }
 
-    return locationsData;
+    const locationReaction = await this.dataSource.manager.find(LocationReaction, {
+      where: { user: { id: user.id } },
+      relations: ['user', 'location']
+    });
+
+    const locationWithCurrentUserReaction = locationsData.map((location) => {
+      const reaction = locationReaction.find((reaction) => reaction.location.id === location.id && reaction.user.id === location.user.id);
+      return {
+        ...location,
+        isLike: reaction?.reactionType === 'like',
+        isDislike: reaction?.reactionType === 'dislike'
+      }
+    })
+
+    return instanceToPlain(locationWithCurrentUserReaction);
   }
 
   async getLocationsInTwentyKilometer(
     latitude: number,
     longitude: number,
-  ): Promise<Location[]> {
+    user
+  ) {
     const allLocations = await this.location.find({
       relations: ["apiVerificationInfo", "doc", "images", "user"]
     });
@@ -725,6 +741,20 @@ export class LocationService {
       }
     });
 
-    return nearbyLocations;
+    const locationReaction = await this.dataSource.manager.find(LocationReaction, {
+      where: { user: { id: user.id } },
+      relations: ['user', 'location']
+    });
+
+    const nearbyLocationsWithCurrentUserReaction = nearbyLocations.map((location) => {
+      const reaction = locationReaction.find((reaction) => reaction.location.id === location.id && reaction.user.id === location.user.id);
+      return {
+        ...location,
+        isLike: reaction?.reactionType === 'like',
+        isDislike: reaction?.reactionType === 'dislike'
+      }
+    })
+
+    return instanceToPlain(nearbyLocationsWithCurrentUserReaction);
   }
 }

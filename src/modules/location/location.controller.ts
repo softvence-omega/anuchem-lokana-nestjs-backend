@@ -233,8 +233,9 @@ export class LocationController {
   async getLocationsInTwentyKilometer(
     @Query('lat') latitude: number,
     @Query('lng') longitude: number,
+    @Req() req,
   ) {
-    const result = await this.locationService.getLocationsInTwentyKilometer(latitude, longitude);
+    const result = await this.locationService.getLocationsInTwentyKilometer(latitude, longitude, req.user);
     return sendResponse('Nearby locations within 20km fetched successfully.', result);
   }
 }
