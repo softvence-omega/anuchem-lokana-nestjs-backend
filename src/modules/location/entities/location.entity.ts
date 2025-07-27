@@ -17,16 +17,16 @@ export class Location extends AbstractEntity {
     @JoinColumn()
     user: User;
 
-    @Column()
+    @Column({ unique: true })
     gps_code: string;
 
-    @Column()
+    @Column({ nullable: true })
     street_name: string;
 
-    @Column()
+    @Column({ nullable: true })
     district: string;
 
-    @Column()
+    @Column({ nullable: true })
     region: string;
 
     @Column({ enum: Status, default: Status.PENDING })
@@ -58,4 +58,7 @@ export class Location extends AbstractEntity {
 
     @Column({ default: 0 })
     dislike_count: number;
+
+    @Column({ nullable: true })
+    description: string;
 }

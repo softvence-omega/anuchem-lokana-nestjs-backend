@@ -720,7 +720,7 @@ export class LocationService {
     });
 
     const locationWithCurrentUserReaction = locationsData.map((location) => {
-      const reaction = locationReaction.find((reaction) => reaction.location.id === location.id && reaction.user.id === location.user.id);
+      const reaction = locationReaction.find((reaction) => reaction.location.id === location.id && reaction.user.id === user.id);
       return {
         ...location,
         isLike: reaction?.reactionType === ReactionType.LIKE,
@@ -758,7 +758,7 @@ export class LocationService {
     });
 
     const nearbyLocationsWithCurrentUserReaction = nearbyLocations.map((location) => {
-      const reaction = locationReaction.find((reaction) => reaction.location.id === location.id && reaction.user.id === location.user.id);
+      const reaction = locationReaction.find((reaction) => reaction.location.id === location.id && reaction.user.id === user.id);
       return {
         ...location,
         isLike: reaction?.reactionType === ReactionType.LIKE,
