@@ -324,7 +324,7 @@ export class LocationService {
         if (photos.length > 0) {
           const imageUrls = await Promise.all(
             photos.map(async (photo) => {
-              const result = await this.cloudinary.uploadFile(photo);
+              const result = await this.cloudinary.uploadFile(photo, 'location_photos');
               uploadedFilePath.push(result.secure_url);
               return result.secure_url;
             }),
