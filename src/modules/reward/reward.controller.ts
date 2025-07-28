@@ -9,6 +9,7 @@ export class RewardController {
   @Public()
   @Get('operators/:countryCode')
   async getOperators(@Param('countryCode') code: string) {
+    console.log(code);
     return await this.rewardService.getOperatorsByCountry(code);
   }
 

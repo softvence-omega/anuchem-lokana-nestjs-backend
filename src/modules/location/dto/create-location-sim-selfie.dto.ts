@@ -24,6 +24,7 @@ export class CreateLocationSimSelfieDto {
       type: 'string',
       format: 'binary',
     },
+    required: false
   })
   photos: any[];
 
