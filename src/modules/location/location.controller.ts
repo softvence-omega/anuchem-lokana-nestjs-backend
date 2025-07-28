@@ -35,7 +35,7 @@ export class LocationController {
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'selfie', maxCount: 1 },
-      { name: 'photos', maxCount: 3 },
+      // { name: 'photos', maxCount: 3 },
     ]),
   )
   async createSimSelfieLocation(
@@ -51,7 +51,7 @@ export class LocationController {
       req.user,
       payload,
       files.selfie,
-      files.photos,
+      // files.photos,
     );
     return sendResponse(
       'Location with Sim and Selfie saved successfully!',
@@ -65,7 +65,7 @@ export class LocationController {
     FileFieldsInterceptor([
       { name: 'doc', maxCount: 1 },
       { name: 'selfie', maxCount: 1 },
-      { name: 'photos', maxCount: 3 },
+      // { name: 'photos', maxCount: 3 },
     ]),
   )
   @Post('nationalId-with-ocr')
@@ -75,7 +75,7 @@ export class LocationController {
     @UploadedFiles()
     files: {
       selfie: Express.Multer.File[];
-      photos: Express.Multer.File[];
+      // photos: Express.Multer.File[];
       doc: Express.Multer.File[];
     },
   ) {
@@ -85,7 +85,7 @@ export class LocationController {
       payload,
       files.selfie,
       files.doc,
-      files.photos,
+      // files.photos,
     );
     return sendResponse(
       'Location with National ID and OCR saved successfully!',

@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { RewardService } from './reward.service';
 import { Public } from 'src/common/utils/public.decorator';
+import { sendResponse } from 'src/common/utils/sendResponse';
 
 @Controller('reward')
 export class RewardController {
@@ -9,8 +10,11 @@ export class RewardController {
   @Public()
   @Get('operators/:countryCode')
   async getOperators(@Param('countryCode') code: string) {
-    console.log(code);
-    return await this.rewardService.getOperatorsByCountry(code);
+    const result = await this.rewardService.getOperatorsByCountry(code);
+    return sendResponse(
+      "Fetched",
+      result
+    )
   }
 
   @Post('topup')

@@ -22,10 +22,8 @@ services:
       AFRICASTALKING_USERNAME: "sandbox"
       RELOADLY_LOKANA_REWARDS_ENGINE_API_KEY_ID: "H0YrkT7QZOlBHaiaJhQOrw16l7SDjC6d"
       RELOADLY_LOKANA_REWARDS_ENGINE_API_KEY: "AkkDD3Whlm-KrLV2dEZRsR4PJiwfca-qqTOLXxQf1Idh9Yvr7kShgbf93ZbZ9ko"
-      RELOADLY_AUTH_URL: "http://auth.reloadly.com"
-      RELOADLY_API_URL: "http://topups.reloadly.com"
-    # env_file:
-    #   - .env
+      RELOADLY_AUTH_URL: "https://auth.reloadly.com"
+      RELOADLY_API_URL: "https://topups.reloadly.com"
     volumes:
       - /app/node_modules # Prevent overwriting node_modules
       - ./uploads:/app/uploads

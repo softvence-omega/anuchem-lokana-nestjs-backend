@@ -2,9 +2,7 @@ import { ApiProperty, OmitType, PartialType } from '@nestjs/swagger';
 import { CreateLocationNidOcrDto } from './create-location-nid-ocr.dto';
 import { IsString } from 'class-validator';
 
-export class CreateLocationApiVerificationDto extends PartialType(
-    OmitType(CreateLocationNidOcrDto, ['photos'])
-) {
+export class CreateLocationApiVerificationDto extends PartialType(CreateLocationNidOcrDto) {
     @ApiProperty({ example: "John Doe", type: "string" })
     @IsString()
     full_name: string;

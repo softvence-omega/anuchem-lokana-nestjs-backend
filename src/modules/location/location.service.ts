@@ -47,7 +47,7 @@ export class LocationService {
     user,
     payload: CreateLocationSimSelfieDto,
     selfies: Express.Multer.File[],
-    photos: Express.Multer.File[],
+    // photos: Express.Multer.File[],
   ) {
     const isVerified = await this.jwtService.verifyAsync(
       payload.verified_token,
@@ -92,19 +92,19 @@ export class LocationService {
           image.selfie = selfieUpload['secure_url'];
         }
 
-        if (photos.length > 0) {
-          const photoUrls = await Promise.all(
-            photos.map(async (photo) => {
-              const result = await this.cloudinary.uploadFile(
-                photo,
-                'location_photos',
-              );
-              uploadedFilePath.push(result.secure_url);
-              return result['secure_url'];
-            }),
-          );
-          image.images = photoUrls;
-        }
+        // if (photos.length > 0) {
+        //   const photoUrls = await Promise.all(
+        //     photos.map(async (photo) => {
+        //       const result = await this.cloudinary.uploadFile(
+        //         photo,
+        //         'location_photos',
+        //       );
+        //       uploadedFilePath.push(result.secure_url);
+        //       return result['secure_url'];
+        //     }),
+        //   );
+        //   image.images = photoUrls;
+        // }
 
         await manager.save(LocationImage, image);
 
@@ -127,7 +127,7 @@ export class LocationService {
     payload: CreateLocationNidOcrDto,
     selfies: Express.Multer.File[],
     docs: Express.Multer.File[],
-    photos: Express.Multer.File[],
+    // photos: Express.Multer.File[],
   ) {
     const uploadedFilePath: string[] = [];
 
@@ -157,24 +157,24 @@ export class LocationService {
           });
         }
 
-        if (photos.length > 0) {
-          const imageUrls = await Promise.all(
-            photos.map(async (photo) => {
-              const result = await this.cloudinary.uploadFile(
-                photo,
-                'location_photos',
-              );
-              uploadedFilePath.push(result.secure_url);
-              return result['secure_url'];
-            }),
-          );
+        // if (photos.length > 0) {
+        //   const imageUrls = await Promise.all(
+        //     photos.map(async (photo) => {
+        //       const result = await this.cloudinary.uploadFile(
+        //         photo,
+        //         'location_photos',
+        //       );
+        //       uploadedFilePath.push(result.secure_url);
+        //       return result['secure_url'];
+        //     }),
+        //   );
 
-          if (image) {
-            image.images = imageUrls;
-          } else {
-            image = manager.create(LocationImage, { images: imageUrls });
-          }
-        }
+        //   if (image) {
+        //     image.images = imageUrls;
+        //   } else {
+        //     image = manager.create(LocationImage, { images: imageUrls });
+        //   }
+        // }
 
         if (image) {
           await manager.save(LocationImage, image);

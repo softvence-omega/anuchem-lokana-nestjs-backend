@@ -6,7 +6,6 @@ export class CreateLocationAgentCodeDto extends PartialType(
   OmitType(CreateLocationSimSelfieDto, [
     'phone',
     'selfie',
-    'photos',
     'verified_token',
   ]),
 ) {

@@ -25,4 +25,14 @@ export class CreateLocationForVerifyDto {
   @IsString()
   @IsOptional()
   description: string;
+
+  @ApiProperty({
+    description: 'Multiple location photos',
+    type: 'array',
+    items: {
+      type: 'string',
+      format: 'binary',
+    }
+  })
+  photos: any[];
 }

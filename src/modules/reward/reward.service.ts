@@ -38,8 +38,7 @@ export class RewardService {
 
     async getOperatorsByCountry(countryCode: string) {
         const token = await this.authenticate();
-        console.log(token);
-        const url = `https://topups-sandbox.reloadly.com/operators/countries/${countryCode}`;
+        const url = `${this.configService.getOrThrow("RELOADLY_API_URL")}/operators/countries/${countryCode}`;
         console.log(url);
         const response = await axios.get(url, {
             headers: {

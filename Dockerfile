@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies with --build-from-source to ensure bcrypt is compiled for the current architecture
-RUN npm install 
+RUN npm install
 
 # Copy the rest of the application
 COPY . .
