@@ -2,21 +2,9 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsString } from 'class-validator';
 
 export class CreateLocationSimSelfieDto {
-  @ApiProperty({ example: '51.5074°N, 0.123°W', type: 'string' })
+  @ApiProperty({ example: '26db79f4-60f5-4ab9-8ea4-c1d022df82f6', type: 'string' })
   @IsString()
-  gps_code: string;
-
-  @ApiProperty({ example: 'park avenue', type: 'string' })
-  @IsString()
-  street_name: string;
-
-  @ApiProperty({ example: 'Manhattan', type: 'string' })
-  @IsString()
-  district: string;
-
-  @ApiProperty({ example: 'Western New York', type: 'string' })
-  @IsString()
-  region: string;
+  location_id: string;
 
   @ApiProperty({ example: '+233241234567', type: 'string' })
   @IsString()

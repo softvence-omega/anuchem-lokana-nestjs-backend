@@ -1,10 +1,10 @@
 import { IntersectionType, PartialType } from '@nestjs/swagger';
-import { CreateLocationSimSelfieDto } from './create-location-sim-selfie.dto';
 import { CreateLocationApiVerificationDto } from './create-location-api-verfication.dto';
+import { CreateLocationForVerifyDto } from './create-location-for-verify.dto';
 
 export class UpdateLocationDto extends PartialType(
   IntersectionType(
-    CreateLocationSimSelfieDto,
+    CreateLocationForVerifyDto,
     CreateLocationApiVerificationDto,
   ),
-) {}
+) { }

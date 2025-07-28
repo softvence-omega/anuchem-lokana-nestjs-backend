@@ -69,12 +69,16 @@ export class LocationService {
 
     try {
       return await this.dataSource.transaction(async (manager) => {
-        const existingLocation = await manager.findOneBy(Location, {
-          gps_code: payload.gps_code,
+        const existingLocation = await manager.findOne(Location, {
+          where: {
+            id: payload.location_id,
+            user: { id: user.id }
+          },
+          relations: ["apiVerificationInfo", "doc", "user", "images"]
         });
 
-        if (existingLocation) {
-          throw new ConflictException('Location already exists!');
+        if (!existingLocation) {
+          throw new NotFoundException('Location not Found!');
         }
 
         const image = manager.create(LocationImage);
@@ -104,17 +108,10 @@ export class LocationService {
 
         await manager.save(LocationImage, image);
 
-        const location = manager.create(Location, {
-          gps_code: payload.gps_code,
-          phone: payload.phone,
-          region: payload.region,
-          street_name: payload.street_name,
-          images: image,
-          district: payload.district,
-          user: user.id,
-        });
+        existingLocation.phone = payload.phone;
+        existingLocation.images = image;
 
-        return await manager.save(Location, location);
+        return await manager.save(Location, existingLocation);
       });
     } catch (err) {
       for (const path of uploadedFilePath) {
@@ -136,12 +133,16 @@ export class LocationService {
 
     try {
       return await this.dataSource.transaction(async (manager) => {
-        const existingLocation = await manager.findOneBy(Location, {
-          gps_code: payload.gps_code,
+        const existingLocation = await manager.findOne(Location, {
+          where: {
+            id: payload.location_id,
+            user: { id: user.id }
+          },
+          relations: ["apiVerificationInfo", "doc", "user", "images"]
         });
 
-        if (existingLocation) {
-          throw new ConflictException('Location already exists!');
+        if (!existingLocation) {
+          throw new NotFoundException('Something went wrong!');
         }
 
         let image: LocationImage | null = null;
@@ -190,17 +191,11 @@ export class LocationService {
           await manager.save(LocationDocs, doc);
         }
 
-        const location = manager.create(Location, {
-          gps_code: payload.gps_code,
-          street_name: payload.street_name,
-          region: payload.region,
-          district: payload.district,
-          user: user.id,
-          images: image ?? null,
-          doc: doc ?? null,
-        } as DeepPartial<Location>);
+        existingLocation.images = image as LocationImage;
+        existingLocation.doc = doc as LocationDocs;
 
-        return await manager.save(Location, location);
+
+        return await manager.save(Location, existingLocation);
       });
     } catch (err) {
       for (const path of uploadedFilePath) {
@@ -221,20 +216,16 @@ export class LocationService {
 
     try {
       return await this.dataSource.transaction(async (manager) => {
-        const locationDataExist = await manager.findOneBy(Location, {
-          gps_code: payload.gps_code,
+        const locationDataExist = await manager.findOne(Location, {
+          where: {
+            id: payload.location_id,
+            user: { id: user.id }
+          },
+          relations: ["apiVerificationInfo", "doc", "user", "images"]
         });
 
-        const userData = await manager.findOneBy(User, {
-          id: user.id,
-        });
-
-        if (!userData) {
-          throw new ForbiddenException('Something went wrong! try again!');
-        }
-
-        if (locationDataExist) {
-          throw new ConflictException('Location already exists!');
+        if (!locationDataExist) {
+          throw new NotFoundException('Someting went wrong!');
         }
 
         let image: LocationImage | null = null;
@@ -273,18 +264,12 @@ export class LocationService {
 
         await manager.save(LocationApiVerificationInfo, apiVerificationInfo);
 
-        const location = manager.create(Location, {
-          user: userData,
-          gps_code: payload.gps_code,
-          region: payload.region,
-          street_name: payload.street_name,
-          district: payload.district,
-          images: image ?? null,
-          doc: doc ?? null,
-          apiVerificationInfo: apiVerificationInfo,
-        } as DeepPartial<Location>);
+        locationDataExist.images = image ?? locationDataExist.images;
+        locationDataExist.doc = doc ?? locationDataExist.doc;
+        locationDataExist.apiVerificationInfo = apiVerificationInfo;
 
-        return await manager.save(Location, location);
+
+        return await manager.save(Location, locationDataExist);
       });
     } catch (err) {
       for (const path of uploadedFilePath) {
@@ -358,32 +343,21 @@ export class LocationService {
   async createLocationAgentCode(user, payload: CreateLocationAgentCodeDto) {
     try {
       return await this.dataSource.transaction(async (manager) => {
-        const locationData = await manager.findOneBy(Location, {
-          gps_code: payload.gps_code,
+        const locationData = await manager.findOne(Location, {
+          where: {
+            id: payload.location_id,
+            user: { id: user.id }
+          },
+          relations: ["apiVerificationInfo", "doc", "user", "images"]
         });
 
-        if (locationData) {
-          throw new ConflictException('Location already exist!');
+        if (!locationData) {
+          throw new NotFoundException('Something went wrong!');
         }
 
-        const userData = await manager.findOneBy(User, {
-          id: user.id,
-        });
+        locationData.agent_code = payload.agent_code;
 
-        if (!userData) {
-          throw new NotFoundException('Something went wrong! try again');
-        }
-
-        const location = await manager.create(Location, {
-          gps_code: payload.gps_code,
-          street_name: payload.street_name,
-          region: payload.region,
-          district: payload.district,
-          agent_code: payload.agent_code,
-          user: userData,
-        } as DeepPartial<Location>);
-
-        return await manager.save(Location, location);
+        return await manager.save(Location, locationData);
       });
     } catch (err) {
       throw err;
