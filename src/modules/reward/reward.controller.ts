@@ -1,25 +1,38 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
 import { RewardService } from './reward.service';
 import { Public } from 'src/common/utils/public.decorator';
 import { sendResponse } from 'src/common/utils/sendResponse';
+import { TopUpDto } from './dto/top-up.dto';
 
 @Controller('reward')
 export class RewardController {
   constructor(private readonly rewardService: RewardService) { }
 
-  @Public()
-  @Get('operators/:countryCode')
-  async getOperators(@Param('countryCode') code: string) {
+  @Get('countries')
+  async getCountries() {
+    const result = await this.rewardService.getCountries();
+    return sendResponse(
+      "All Operator fetched by country",
+      result
+    )
+  }
+
+  @Get('operators/:countryIsoName')
+  async getOperators(@Param('countryIsoName') code: string) {
     const result = await this.rewardService.getOperatorsByCountry(code);
     return sendResponse(
-      "Fetched",
+      "All Operator fetched by country",
       result
     )
   }
 
   @Post('topup')
-  topup(@Body() body: { phone: string; amount: number; operatorId: number }) {
-    return this.rewardService.sendTopUp(body.phone, body.amount, body.operatorId);
+  async topup(@Body() body: TopUpDto, @Req() req) {
+    const result = await this.rewardService.sendTopUp(req.user, body);
+    return sendResponse(
+      "Your top-up request was successful!",
+      result
+    )
   }
 }
 

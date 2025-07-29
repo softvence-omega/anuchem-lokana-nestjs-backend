@@ -1,18 +1,21 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
+import { TopUpDto } from './dto/top-up.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { User } from '../user/entities/user.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class RewardService {
     private accessToken: string;
     private tokenExpiry: number;
 
-    constructor(private configService: ConfigService) { }
+    constructor(private configService: ConfigService, @InjectRepository(User) private userRepository: Repository<User>) { }
 
     private async authenticate() {
         const now = Date.now();
 
-        // Only fetch new token if expired
         if (this.accessToken && this.tokenExpiry > now) {
             return this.accessToken;
         }
@@ -36,6 +39,21 @@ export class RewardService {
         return this.accessToken;
     }
 
+    async getCountries() {
+        const token = await this.authenticate();
+        const url = `${this.configService.getOrThrow("RELOADLY_API_URL")}/countries`;
+        console.log(url);
+        const response = await axios.get(url, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/com.reloadly.topups-v1+json',
+            },
+        });
+
+        return response.data;
+    }
+
+
     async getOperatorsByCountry(countryCode: string) {
         const token = await this.authenticate();
         const url = `${this.configService.getOrThrow("RELOADLY_API_URL")}/operators/countries/${countryCode}`;
@@ -50,31 +68,45 @@ export class RewardService {
         return response.data;
     }
 
-    async sendTopUp(phoneNumber: string, amount: number, operatorId: number) {
+    async sendTopUp(user, body: TopUpDto) {
+        const { operatorId, amount, phoneNumber, countryIsoName, reward_points } = body;
+        const userData = await this.userRepository.findOneBy({ id: user.id });
+
+        if (!userData) {
+            throw new ForbiddenException('Something went wrong!');
+        }
+
         const token = await this.authenticate();
-        const url = `${this.configService.get('RELOADLY_API_URL')}/topups`;
 
-        const response = await axios.post(
-            url,
-            {
-                operatorId,
-                amount,
-                useLocalAmount: true,
-                customIdentifier: 'MyTx12345',
-                recipientPhone: {
-                    countryCode: 'NG',
-                    number: phoneNumber,
-                },
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    Accept: 'application/com.reloadly.topups-v1+json',
-                    'Content-Type': 'application/json',
-                },
-            },
-        );
+        if (!token) {
+            throw new ForbiddenException('Invalid User!');
+        }
 
-        return response.data;
+        // const url = `${this.configService.get('RELOADLY_API_URL')}/topups`;
+        // const response = await axios.post(
+        //     url,
+        //     {
+        //         operatorId,
+        //         amount,
+        //         useLocalAmount: true,
+        //         customIdentifier: userData.id,
+        //         recipientPhone: {
+        //             countryCode: countryIsoName,
+        //             number: phoneNumber,
+        //         },
+        //     },
+        //     {
+        //         headers: {
+        //             Authorization: `Bearer ${token}`,
+        //             Accept: 'application/com.reloadly.topups-v1+json',
+        //             'Content-Type': 'application/json',
+        //         },
+        //     },
+        // );
+
+        return {
+            ...body,
+            user: userData.id
+        };
     }
 }
