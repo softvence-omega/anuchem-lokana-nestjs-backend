@@ -8,6 +8,15 @@ import { TopUpDto } from './dto/top-up.dto';
 export class RewardController {
   constructor(private readonly rewardService: RewardService) { }
 
+  @Get('points')
+  async getRewardPoints(@Req() req) {
+    const result = await this.rewardService.getRewardPoints(req.user);
+    return sendResponse(
+      "Users reward points fetched",
+      result
+    )
+  }
+
   @Get('countries')
   async getCountries() {
     const result = await this.rewardService.getCountries();

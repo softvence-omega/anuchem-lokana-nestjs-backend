@@ -57,16 +57,13 @@ export class AuthService {
 
     const accessToken = await this.jwtService.signAsync(jwtPayload);
 
-    const rewardPoints = await this.rewardRepository.findOneBy({ user: { id: user.id } });
-
     return {
       accessToken,
       user: {
         id: user.id,
         username: user.name,
         email: user.email,
-        role: user.role,
-        reward: rewardPoints ?? null
+        role: user.role
       },
     };
   }

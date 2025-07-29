@@ -1,17 +1,22 @@
-import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 import { TopUpDto } from './dto/top-up.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../user/entities/user.entity';
 import { Repository } from 'typeorm';
+import { Reward } from './entities/reward.entity';
 
 @Injectable()
 export class RewardService {
     private accessToken: string;
     private tokenExpiry: number;
 
-    constructor(private configService: ConfigService, @InjectRepository(User) private userRepository: Repository<User>) { }
+    constructor(
+        private configService: ConfigService,
+        @InjectRepository(User) private userRepository: Repository<User>,
+        @InjectRepository(Reward) private rewardRepository: Repository<Reward>
+    ) { }
 
     private async authenticate() {
         const now = Date.now();
@@ -37,6 +42,16 @@ export class RewardService {
         this.tokenExpiry = now + response.data.expires_in * 1000;
 
         return this.accessToken;
+    }
+
+    async getRewardPoints(user) {
+        const rewardPoints = await this.rewardRepository.findOneBy({ user: { id: user.id } });
+
+        if (!rewardPoints) {
+            throw new NotFoundException("User didn't achieved any reward points");
+        }
+
+        return rewardPoints;
     }
 
     async getCountries() {
