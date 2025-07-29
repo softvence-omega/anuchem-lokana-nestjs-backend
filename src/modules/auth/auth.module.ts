@@ -8,10 +8,11 @@ import { AuthGuard } from 'src/common/guards/auth.guard';
 import { User } from '../user/entities/user.entity';
 import { CommonModule } from 'src/common/common.module';
 import { VerificaitonCode } from '../user/entities/verification-code.entity';
+import { Reward } from '../reward/entities/reward.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, VerificaitonCode]),
+    TypeOrmModule.forFeature([User, VerificaitonCode, Reward]),
     JwtHelperModule,
     CommonModule,
   ],
@@ -24,4 +25,4 @@ import { VerificaitonCode } from '../user/entities/verification-code.entity';
     },
   ],
 })
-export class AuthModule {}
+export class AuthModule { }

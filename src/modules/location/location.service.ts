@@ -29,6 +29,7 @@ import { User } from '../user/entities/user.entity';
 import { LocationReaction, ReactionType } from './entities/location-reaction';
 import { HelperService } from 'src/common/utils/helper.service';
 import { instanceToPlain } from 'class-transformer';
+import { Reward } from '../reward/entities/reward.entity';
 
 @Injectable()
 export class LocationService {
@@ -107,6 +108,12 @@ export class LocationService {
         // }
 
         await manager.save(LocationImage, image);
+
+        const reward = await manager.create(Reward, {
+          user: { id: user.id },
+          user_points: 25,
+        })
+        await manager.save(Reward, reward);
 
         existingLocation.phone = payload.phone;
         existingLocation.images = image;
@@ -264,6 +271,12 @@ export class LocationService {
 
         await manager.save(LocationApiVerificationInfo, apiVerificationInfo);
 
+        const reward = await manager.create(Reward, {
+          user: { id: user.id },
+          user_points: 30,
+        })
+        await manager.save(Reward, reward);
+
         // locationDataExist.images = image ?? locationDataExist.images;
         locationDataExist.doc = doc ?? locationDataExist.doc;
         locationDataExist.apiVerificationInfo = apiVerificationInfo;
@@ -328,7 +341,11 @@ export class LocationService {
           images: image ?? null,
           user: userData,
         } as DeepPartial<Location>);
-
+        const reward = await manager.create(Reward, {
+          user: userData,
+          user_points: 25,
+        })
+        await manager.save(Reward, reward);
         return await manager.save(Location, location);
       });
     } catch (err) {

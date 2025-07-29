@@ -20,6 +20,7 @@ import {
   OtpSendMethod,
   VerificaitonCode,
 } from '../user/entities/verification-code.entity';
+import { Reward } from '../reward/entities/reward.entity';
 
 @Injectable()
 export class AuthService {
@@ -27,11 +28,13 @@ export class AuthService {
     @InjectRepository(User) private userRepository: Repository<User>,
     @InjectRepository(VerificaitonCode)
     private verificationCodeRepository: Repository<VerificaitonCode>,
+    @InjectRepository(Reward)
+    private rewardRepository: Repository<Reward>,
     private config: ConfigService,
     private jwtService: JwtService,
     private emailService: EmailService,
     private bcrypt: BcryptService,
-  ) {}
+  ) { }
 
   async login(payload: LoginAuthDto) {
     const user = await this.userRepository.findOneBy({ email: payload.email });
@@ -54,6 +57,8 @@ export class AuthService {
 
     const accessToken = await this.jwtService.signAsync(jwtPayload);
 
+    const rewardPoints = await this.rewardRepository.findOneBy({ user: { id: user.id } });
+
     return {
       accessToken,
       user: {
@@ -61,6 +66,7 @@ export class AuthService {
         username: user.name,
         email: user.email,
         role: user.role,
+        reward: rewardPoints ?? null
       },
     };
   }
