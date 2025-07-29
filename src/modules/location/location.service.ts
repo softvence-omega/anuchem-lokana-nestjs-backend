@@ -209,7 +209,7 @@ export class LocationService {
   async createLocationApiVerification(
     user,
     payload: CreateLocationApiVerificationDto,
-    selfies: Express.Multer.File[],
+    // selfies: Express.Multer.File[],
     docs: Express.Multer.File[],
   ) {
     const uploadedFilePath: string[] = [];
@@ -228,18 +228,18 @@ export class LocationService {
           throw new NotFoundException('Someting went wrong!');
         }
 
-        let image: LocationImage | null = null;
-        if (selfies.length > 0) {
-          const result = await this.cloudinary.uploadFile(
-            selfies[0],
-            'selfies',
-          );
-          uploadedFilePath.push(result.secure_url);
-          image = manager.create(LocationImage, {
-            selfie: result.secure_url,
-          });
-          await manager.save(LocationImage, image);
-        }
+        // let image: LocationImage | null = null;
+        // if (selfies.length > 0) {
+        //   const result = await this.cloudinary.uploadFile(
+        //     selfies[0],
+        //     'selfies',
+        //   );
+        //   uploadedFilePath.push(result.secure_url);
+        //   image = manager.create(LocationImage, {
+        //     selfie: result.secure_url,
+        //   });
+        //   await manager.save(LocationImage, image);
+        // }
 
         let doc: LocationDocs | null = null;
         if (docs.length > 0) {
@@ -264,7 +264,7 @@ export class LocationService {
 
         await manager.save(LocationApiVerificationInfo, apiVerificationInfo);
 
-        locationDataExist.images = image ?? locationDataExist.images;
+        // locationDataExist.images = image ?? locationDataExist.images;
         locationDataExist.doc = doc ?? locationDataExist.doc;
         locationDataExist.apiVerificationInfo = apiVerificationInfo;
 

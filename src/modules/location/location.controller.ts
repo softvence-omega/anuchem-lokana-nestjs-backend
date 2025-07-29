@@ -107,14 +107,14 @@ export class LocationController {
     @Body() payload: CreateLocationApiVerificationDto,
     @UploadedFiles()
     files: {
-      selfie: Express.Multer.File[];
+      // selfie: Express.Multer.File[];
       doc: Express.Multer.File[];
     },
   ) {
     const result = await this.locationService.createLocationApiVerification(
       req.user,
       payload,
-      files.selfie,
+      // files.selfie,
       files.doc,
     );
     return sendResponse(
