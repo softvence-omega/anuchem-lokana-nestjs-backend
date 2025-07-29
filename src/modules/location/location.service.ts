@@ -109,10 +109,17 @@ export class LocationService {
 
         await manager.save(LocationImage, image);
 
-        const reward = await manager.create(Reward, {
-          user: { id: user.id },
-          user_points: 25,
-        })
+        let reward = await manager.findOne(Reward, {
+          where: { user: { id: user.id } }
+        });
+
+        if (!reward) {
+          reward = await manager.create(Reward, {
+            user: { id: user.id },
+            user_points: 25,
+          })
+        }
+        reward.user_points += 25;
         await manager.save(Reward, reward);
 
         existingLocation.phone = payload.phone;
@@ -271,10 +278,17 @@ export class LocationService {
 
         await manager.save(LocationApiVerificationInfo, apiVerificationInfo);
 
-        const reward = await manager.create(Reward, {
-          user: { id: user.id },
-          user_points: 30,
-        })
+        let reward = await manager.findOne(Reward, {
+          where: { user: { id: user.id } }
+        });
+
+        if (!reward) {
+          reward = await manager.create(Reward, {
+            user: { id: user.id },
+            user_points: 25,
+          })
+        }
+        reward.user_points += 25;
         await manager.save(Reward, reward);
 
         // locationDataExist.images = image ?? locationDataExist.images;
@@ -341,10 +355,17 @@ export class LocationService {
           images: image ?? null,
           user: userData,
         } as DeepPartial<Location>);
-        const reward = await manager.create(Reward, {
-          user: userData,
-          user_points: 25,
-        })
+        let reward = await manager.findOne(Reward, {
+          where: { user: { id: user.id } }
+        });
+
+        if (!reward) {
+          reward = await manager.create(Reward, {
+            user: { id: user.id },
+            user_points: 25,
+          })
+        }
+        reward.user_points += 25;
         await manager.save(Reward, reward);
         return await manager.save(Location, location);
       });
