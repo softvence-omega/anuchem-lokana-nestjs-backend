@@ -125,7 +125,7 @@ export class LocationService {
   async createNidOcrLocation(
     user,
     payload: CreateLocationNidOcrDto,
-    selfies: Express.Multer.File[],
+    // selfies: Express.Multer.File[],
     docs: Express.Multer.File[],
     // photos: Express.Multer.File[],
   ) {
@@ -146,16 +146,16 @@ export class LocationService {
         }
 
         let image: LocationImage | null = null;
-        if (selfies.length > 0) {
-          const result = await this.cloudinary.uploadFile(
-            selfies[0],
-            'selfies',
-          );
-          uploadedFilePath.push(result.secure_url);
-          image = manager.create(LocationImage, {
-            selfie: result['secure_url'],
-          });
-        }
+        // if (selfies.length > 0) {
+        //   const result = await this.cloudinary.uploadFile(
+        //     selfies[0],
+        //     'selfies',
+        //   );
+        //   uploadedFilePath.push(result.secure_url);
+        //   image = manager.create(LocationImage, {
+        //     selfie: result['secure_url'],
+        //   });
+        // }
 
         // if (photos.length > 0) {
         //   const imageUrls = await Promise.all(
@@ -191,7 +191,7 @@ export class LocationService {
           await manager.save(LocationDocs, doc);
         }
 
-        existingLocation.images = image as LocationImage;
+        // existingLocation.images = image as LocationImage;
         existingLocation.doc = doc as LocationDocs;
 
 

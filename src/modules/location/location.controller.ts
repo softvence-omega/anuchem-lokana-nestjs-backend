@@ -83,7 +83,7 @@ export class LocationController {
     const result = await this.locationService.createNidOcrLocation(
       req.user,
       payload,
-      files.selfie,
+      // files.selfie,
       files.doc,
       // files.photos,
     );
