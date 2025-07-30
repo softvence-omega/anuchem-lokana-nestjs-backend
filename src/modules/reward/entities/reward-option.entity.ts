@@ -13,6 +13,6 @@ export class RewardOption extends AbstractEntity {
     @Column()
     reward_amounts: number
 
-    @ManyToOne(() => User)
-    created_by: User
+    // @ManyToOne(() => User)
+    // created_by: User
 }

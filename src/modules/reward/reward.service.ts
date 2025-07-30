@@ -144,8 +144,7 @@ export class RewardService {
     async createRewardOption(payload: CreateRewardOptionDto, user) {
         try {
             const data = await this.rewardOptionRepository.create({
-                ...payload,
-                created_by: { id: user.id }
+                ...payload
             })
 
             return await this.rewardOptionRepository.save(data);
