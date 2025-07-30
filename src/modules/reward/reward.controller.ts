@@ -54,16 +54,17 @@ export class RewardController {
   // @ApiSecurity('accessToken')
   @Get('options')
   async getRewardOptions() {
-    const result = this.rewardService.getAllRewardOptions();
+    const result = await this.rewardService.getAllRewardOptions();
     return sendResponse(
       'All reward Options are fetched',
       result
     )
   }
 
+  @ApiSecurity('accessToken')
   @Get('history')
   async getRewardHistory(@Req() req) {
-    const result = this.rewardService.getRewardHistory(req.user);
+    const result = await this.rewardService.getRewardHistory(req.user);
     return sendResponse(
       'All reward history are fetched',
       result
@@ -74,9 +75,9 @@ export class RewardController {
   // @ApiSecurity('accessToken')
   @Post('create/options')
   async createOptions(@Body() payload: CreateRewardOptionDto, @Req() req) {
-    const result = this.rewardService.createRewardOption(payload, req.user);
+    const result = await this.rewardService.createRewardOption(payload, req.user);
     return sendResponse(
-      'All reward Options are fetched',
+      "Reward option created successfully",
       result
     )
   }

@@ -147,7 +147,8 @@ export class RewardService {
                 ...payload
             })
 
-            return await this.rewardOptionRepository.save(data);
+            const rewardOption = await this.rewardOptionRepository.save(data);
+            return rewardOption;
         } catch (err) {
             throw err
         }
