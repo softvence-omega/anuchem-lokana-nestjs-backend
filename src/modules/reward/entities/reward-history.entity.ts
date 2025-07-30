@@ -8,7 +8,7 @@ export class RewardHistory extends AbstractEntity {
     @JoinColumn()
     user: User;
 
-    @Column({ type: "varchar2", default: 0 })
+    @Column({ nullable: true })
     reason: string;
 
     @Column({ type: 'int4', default: 0 })
