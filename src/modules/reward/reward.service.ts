@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { Reward } from './entities/reward.entity';
 import { RewardOption } from './entities/reward-option.entity';
 import { CreateRewardOptionDto } from './dto/create-reward-option.dto';
+import { RewardHistory } from './entities/reward-history.entity';
 
 @Injectable()
 export class RewardService {
@@ -18,7 +19,8 @@ export class RewardService {
         private configService: ConfigService,
         @InjectRepository(User) private userRepository: Repository<User>,
         @InjectRepository(Reward) private rewardRepository: Repository<Reward>,
-        @InjectRepository(RewardOption) private rewardOptionRepository: Repository<RewardOption>
+        @InjectRepository(RewardOption) private rewardOptionRepository: Repository<RewardOption>,
+        @InjectRepository(RewardHistory) private rewardHistoryRepository: Repository<RewardHistory>
     ) { }
 
     private async authenticate() {
@@ -147,6 +149,22 @@ export class RewardService {
             })
 
             return await this.rewardOptionRepository.save(data);
+        } catch (err) {
+            throw err
+        }
+    }
+
+    async getRewardHistory(user) {
+        try {
+            const data = await this.rewardHistoryRepository.find({
+                where: { user: { id: user.id } }
+            });
+
+            if (!data) {
+                throw new NotFoundException('No data found');
+            }
+
+            return data;
         } catch (err) {
             throw err
         }

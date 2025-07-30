@@ -61,6 +61,15 @@ export class RewardController {
     )
   }
 
+  @Get('history')
+  async getRewardHistory(@Req() req) {
+    const result = this.rewardService.getRewardHistory(req.user);
+    return sendResponse(
+      'All reward history are fetched',
+      result
+    )
+  }
+
   @Public()
   // @ApiSecurity('accessToken')
   @Post('create/options')

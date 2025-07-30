@@ -30,6 +30,7 @@ import { LocationReaction, ReactionType } from './entities/location-reaction';
 import { HelperService } from 'src/common/utils/helper.service';
 import { instanceToPlain } from 'class-transformer';
 import { Reward } from '../reward/entities/reward.entity';
+import { RewardHistory } from '../reward/entities/reward-history.entity';
 
 @Injectable()
 export class LocationService {
@@ -125,6 +126,14 @@ export class LocationService {
         existingLocation.phone = payload.phone;
         existingLocation.images = image;
 
+        const rewardHistoryData = await manager.create(RewardHistory, {
+          user: { id: user.id },
+          reason: "Sim and Selfie verification",
+          reward_points: 25
+        });
+
+        await manager.save(RewardHistory, rewardHistoryData);
+
         return await manager.save(Location, existingLocation);
       });
     } catch (err) {
@@ -208,7 +217,6 @@ export class LocationService {
         // existingLocation.images = image as LocationImage;
         existingLocation.doc = doc as LocationDocs;
 
-
         return await manager.save(Location, existingLocation);
       });
     } catch (err) {
@@ -291,6 +299,14 @@ export class LocationService {
         reward.user_points += 25;
         await manager.save(Reward, reward);
 
+        const rewardHistoryData = await manager.create(RewardHistory, {
+          user: { id: user.id },
+          reason: "National ID verification",
+          reward_points: 20
+        });
+
+        await manager.save(RewardHistory, rewardHistoryData);
+
         // locationDataExist.images = image ?? locationDataExist.images;
         locationDataExist.doc = doc ?? locationDataExist.doc;
         locationDataExist.apiVerificationInfo = apiVerificationInfo;
@@ -367,6 +383,14 @@ export class LocationService {
         }
         reward.user_points += 25;
         await manager.save(Reward, reward);
+
+        const rewardHistoryData = await manager.create(RewardHistory, {
+          user: { id: user.id },
+          reason: "Creation of new Location",
+          reward_points: 25
+        });
+
+        await manager.save(RewardHistory, rewardHistoryData);
         return await manager.save(Location, location);
       });
     } catch (err) {
