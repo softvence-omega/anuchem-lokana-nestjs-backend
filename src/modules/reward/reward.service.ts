@@ -6,6 +6,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../user/entities/user.entity';
 import { Repository } from 'typeorm';
 import { Reward } from './entities/reward.entity';
+import { RewardOption } from './entities/reward-option.entity';
+import { CreateRewardOptionDto } from './dto/create-reward-option.dto';
 
 @Injectable()
 export class RewardService {
@@ -15,7 +17,8 @@ export class RewardService {
     constructor(
         private configService: ConfigService,
         @InjectRepository(User) private userRepository: Repository<User>,
-        @InjectRepository(Reward) private rewardRepository: Repository<Reward>
+        @InjectRepository(Reward) private rewardRepository: Repository<Reward>,
+        @InjectRepository(RewardOption) private rewardOptionRepository: Repository<RewardOption>
     ) { }
 
     private async authenticate() {
@@ -123,5 +126,29 @@ export class RewardService {
             ...body,
             user: userData.id
         };
+    }
+
+    async getAllRewardOptions() {
+        const data = await this.rewardOptionRepository.find();
+
+        if (!data) {
+            throw new NotFoundException('Not options are found!');
+        }
+
+        return data;
+    }
+
+
+    async createRewardOption(payload: CreateRewardOptionDto, user) {
+        try {
+            const data = await this.rewardOptionRepository.create({
+                ...payload,
+                created_by: { id: user.id }
+            })
+
+            return await this.rewardOptionRepository.save(data);
+        } catch (err) {
+            throw err
+        }
     }
 }

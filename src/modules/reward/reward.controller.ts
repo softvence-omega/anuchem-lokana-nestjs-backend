@@ -4,6 +4,7 @@ import { Public } from 'src/common/utils/public.decorator';
 import { sendResponse } from 'src/common/utils/sendResponse';
 import { TopUpDto } from './dto/top-up.dto';
 import { ApiSecurity } from '@nestjs/swagger';
+import { CreateRewardOptionDto } from './dto/create-reward-option.dto';
 
 @Controller('reward')
 export class RewardController {
@@ -45,6 +46,26 @@ export class RewardController {
     const result = await this.rewardService.sendTopUp(req.user, body);
     return sendResponse(
       "Your top-up request was successful!",
+      result
+    )
+  }
+
+  @ApiSecurity('accessToken')
+  @Get('options')
+  async getRewardOptions() {
+    const result = this.rewardService.getAllRewardOptions();
+    return sendResponse(
+      'All reward Options are fetched',
+      result
+    )
+  }
+
+  @ApiSecurity('accessToken')
+  @Post('create/options')
+  async createOptions(@Body() payload: CreateRewardOptionDto, @Req() req) {
+    const result = this.rewardService.createRewardOption(payload, req.user);
+    return sendResponse(
+      'All reward Options are fetched',
       result
     )
   }
