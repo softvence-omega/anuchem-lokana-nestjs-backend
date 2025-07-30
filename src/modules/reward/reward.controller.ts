@@ -50,7 +50,8 @@ export class RewardController {
     )
   }
 
-  @ApiSecurity('accessToken')
+  @Public()
+  // @ApiSecurity('accessToken')
   @Get('options')
   async getRewardOptions() {
     const result = this.rewardService.getAllRewardOptions();
@@ -60,7 +61,8 @@ export class RewardController {
     )
   }
 
-  @ApiSecurity('accessToken')
+  @Public()
+  // @ApiSecurity('accessToken')
   @Post('create/options')
   async createOptions(@Body() payload: CreateRewardOptionDto, @Req() req) {
     const result = this.rewardService.createRewardOption(payload, req.user);
